@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 
 type Produto = {
+  id: number
   codigo: string
   nome: string
   categoria: string | null
@@ -106,7 +107,7 @@ export default function Home() {
       ) : (
         <div style={s.grid}>
           {filtrados.map((p) => (
-            <button key={p.codigo} style={s.card} onClick={() => setSelecionado(p)}>
+            <button key={p.codigo ?? p.id} style={s.card} onClick={() => setSelecionado(p)}>
               <div style={s.imgWrap}>
                 {p.imagem_url ? (
                   <img src={p.imagem_url} alt={p.nome} style={s.img} />
@@ -117,7 +118,6 @@ export default function Home() {
               <div style={s.cardCorpo}>
                 <span style={s.cardCat}>{p.categoria}</span>
                 <span style={s.cardNome}>{p.novo_nome || p.nome}</span>
-                <span style={s.cardCodigo}>{p.codigo}</span>
               </div>
             </button>
           ))}
@@ -136,7 +136,12 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
   const [carregando, setCarregando] = useState(true)
 
   useEffect(() => {
-    setCarregando(true)
+  if (!produto.codigo) {
+    setItens([])
+    setCarregando(false)
+    return
+  }
+  setCarregando(true)
     supabase
       .from('relacoes')
       .select(
@@ -248,7 +253,7 @@ const s: Record<string, CSSProperties> = {
   busca: { width: '100%', padding: '12px 16px', fontSize: 16, border: '1px solid #000', borderRadius: 10, marginBottom: 16, boxSizing: 'border-box' },
   filtros: { display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   filtroBtn: { padding: '8px 14px', fontSize: 13, fontWeight: 600, border: '1px solid #000', borderRadius: 999, background: '#ffffff', color: '#444', cursor: 'pointer' },
-  filtroBtnAtivo: { background: '#155dfc', color: '#fff', borderColor: '#155dfc' },
+  filtroBtnAtivo: { background: '#155dfc', color: '#fff', border: '1px solid #155dfc' },
   contagem: { color: '#444', fontSize: 14, margin: '8px 0 20px' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 },
   card: { textAlign: 'left', border: '1px solid #eee', borderRadius: 14, overflow: 'hidden', background: '#fff', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column' },
