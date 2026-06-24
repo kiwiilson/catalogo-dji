@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 
 type Produto = {
-  id: number
   codigo: string
   nome: string
   categoria: string | null
@@ -62,7 +61,9 @@ export default function Home() {
         const okBusca =
           !termo ||
           p.nome.toLowerCase().includes(termo) ||
-          p.codigo.toLowerCase().includes(termo)
+          p.codigo.toLowerCase().includes(termo) ||
+          (p.novo_nome?.toLowerCase().includes(termo) ?? false) ||
+          (p.descricao?.toLowerCase().includes(termo) ?? false)
         return okCat && okBusca
       })
       .sort((a, b) =>
@@ -81,7 +82,7 @@ export default function Home() {
 
       <input
         style={s.busca}
-        placeholder="Buscar por nome ou código…"
+        placeholder="Buscar por nome, código ou descrição…"
         value={busca}
         onChange={(e) => setBusca(e.target.value)}
       />
@@ -107,7 +108,7 @@ export default function Home() {
       ) : (
         <div style={s.grid}>
           {filtrados.map((p) => (
-            <button key={p.codigo ?? p.id} style={s.card} onClick={() => setSelecionado(p)}>
+            <button key={p.codigo} style={s.card} onClick={() => setSelecionado(p)}>
               <div style={s.imgWrap}>
                 {p.imagem_url ? (
                   <img src={p.imagem_url} alt={p.nome} style={s.img} />
@@ -118,6 +119,7 @@ export default function Home() {
               <div style={s.cardCorpo}>
                 <span style={s.cardCat}>{p.categoria}</span>
                 <span style={s.cardNome}>{p.novo_nome || p.nome}</span>
+                <span style={s.cardCodigo}>{p.codigo}</span>
               </div>
             </button>
           ))}
@@ -134,14 +136,10 @@ export default function Home() {
 function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void }) {
   const [itens, setItens] = useState<ItemRelacionado[]>([])
   const [carregando, setCarregando] = useState(true)
+  const [fotoZoom, setFotoZoom] = useState<string | null>(null)
 
   useEffect(() => {
-  if (!produto.codigo) {
-    setItens([])
-    setCarregando(false)
-    return
-  }
-  setCarregando(true)
+    setCarregando(true)
     supabase
       .from('relacoes')
       .select(
@@ -174,12 +172,18 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
   const outros = itens.filter((i) => i.tipo !== 'obrigatorio' && i.tipo !== 'opcional')
 
   return (
+    <>
     <div style={s.overlay} onClick={onFechar}>
       <div style={s.modal} onClick={(e) => e.stopPropagation()}>
         <button style={s.fechar} onClick={onFechar}>×</button>
         <div style={s.modalHeader}>
           {produto.imagem_url && (
-            <img src={produto.imagem_url} alt={produto.nome} style={s.modalImg} />
+            <img
+              src={produto.imagem_url}
+              alt={produto.nome}
+              style={s.modalImg} 
+              onClick={() => setFotoZoom(produto.imagem_url)}
+            />
           )}
           <div>
             <span style={s.cardCat}>{produto.categoria}</span>
@@ -193,15 +197,21 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
           <p>Carregando itens…</p>
         ) : (
           <>
-            <Secao titulo="Itens obrigatórios" itens={obrigatorios} vazio="Nenhum item obrigatório é necessário para esse item." />
-            <Secao titulo="Acessórios opcionais" itens={opcionais} vazio="Nenhum acessório opcional para esse item." />
+            <Secao titulo="Itens obrigatórios" itens={obrigatorios} vazio="Nenhum item obrigatório cadastrado." />
+            <Secao titulo="Acessórios opcionais" itens={opcionais} vazio="Nenhum acessório opcional cadastrado." />
             {outros.length > 0 && (
-              <Secao titulo="Outros itens compatíveis" itens={outros} vazio="" />
+              <Secao titulo="Outros itens relacionados" itens={outros} vazio="" />
             )}
           </>
         )}
       </div>
     </div>
+    {fotoZoom && (
+      <div style={s.lightbox} onClick={() => setFotoZoom(null)}>
+        <img src={fotoZoom} alt={produto.nome} style={s.lightboxImg} />
+      </div>
+    )}
+    </>
   )
 }
 
@@ -257,7 +267,7 @@ const s: Record<string, CSSProperties> = {
   contagem: { color: '#444', fontSize: 14, margin: '8px 0 20px' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 },
   card: { textAlign: 'left', border: '1px solid #eee', borderRadius: 14, overflow: 'hidden', background: '#fff', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column' },
-  imgWrap: { aspectRatio: '4 / 3', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  imgWrap: { aspectRatio: '4 / 3', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   img: { width: '100%', height: '100%', objectFit: 'contain' },
   imgPlaceholder: { color: '#bbb', fontSize: 13 },
   cardCorpo: { padding: 12, display: 'flex', flexDirection: 'column', gap: 4 },
@@ -268,7 +278,7 @@ const s: Record<string, CSSProperties> = {
   modal: { background: '#fff', borderRadius: 16, maxWidth: 720, width: '100%', maxHeight: '85vh', overflowY: 'auto', padding: 28, position: 'relative' },
   fechar: { position: 'absolute', top: 14, right: 16, border: 'none', background: 'transparent', fontSize: 28, lineHeight: 1, cursor: 'pointer', color: '#888' },
   modalHeader: { display: 'flex', gap: 16, marginBottom: 20 },
-  modalImg: { width: 120, height: 120, objectFit: 'contain', background: '#f5f5f5', borderRadius: 10 },
+  modalImg: { width: 120, height: 120, objectFit: 'contain', background: '#f5f5f5', borderRadius: 10, cursor: 'zoom-in' },
   modalTitulo: { fontSize: 22, fontWeight: 700, margin: '4px 0' },
   modalDesc: { color: '#555', fontSize: 14, marginTop: 6 },
   secao: { marginTop: 20 },
@@ -284,4 +294,6 @@ const s: Record<string, CSSProperties> = {
   qtd: { color: '#155dfc', fontWeight: 700 },
   itemCodigo: { fontSize: 12, color: '#999' },
   itemDesc: { fontSize: 13, color: '#666', marginTop: 2 },
+  lightbox: { position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40, zIndex: 60, cursor: 'zoom-out' },
+  lightboxImg: { maxWidth: '80vw', maxHeight: '80vh', objectFit: 'contain', background: '#fff', borderRadius: 8 },
 }
