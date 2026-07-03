@@ -10,6 +10,10 @@ type Produto = {
   descricao: string | null
   novo_nome: string | null
   imagem_url: string | null
+  links: string | null
+  ativo: boolean | null
+  adicionado_em: string | null
+  removido_em: string | null
 }
 
 type ItemRelacionado = {
@@ -18,9 +22,93 @@ type ItemRelacionado = {
   item: Produto
 }
 
+// Código curto no banco (coluna "categoria") -> rótulo exibido no site.
+// Deixe a chave EXATAMENTE como está no banco. Se faltar, o site mostra o código cru.
+const ROTULOS_CATEGORIAS: Record<string, string> = {
+  drone: 'Drone',
+  dock: 'Dock',
+  terra: 'DJI Terra',
+  payloads: 'Payloads',
+  fh2: 'FlightHub 2',
+  fh2op: 'FlightHub 2 - On-Premises',
+  fh2aio: 'FlightHub 2 - All in One',
+  acessorios: 'Acessórios',
+  servicos: 'Serviços',
+  outros: 'Outros'
+}
+
+// Ordem dos filtros (use os MESMOS códigos do banco).
 const ORDEM_CATEGORIAS = [
-  'Drone', 'Dock', 'FH2', 'Terra', 'Payloads M400', 'Acessórios', 'Serviços', 'Outros',
+  'drone', 'dock', 'terra', 'payloads', 'fh2', 'fh2op', 'fh2aio', 'acessorios', 'servicos', 'outros',
 ]
+
+const NOVOS = 'Novos na tabela'
+const SAIRAM = 'Saíram da tabela'
+
+function rotuloCategoria(cod: string | null) {
+  if (!cod) return ''
+  return ROTULOS_CATEGORIAS[cod] ?? cod
+}
+
+// Nome exibido em cada botão de filtro (TODOS/Novos/Saíram passam direto).
+function nomeFiltro(c: string) {
+  if (c === 'TODOS' || c === NOVOS || c === SAIRAM) return c
+  return rotuloCategoria(c)
+}
+
+function ehDesteMes(data: string | null) {
+  if (!data) return false
+  const d = new Date(data)
+  const hoje = new Date()
+  return d.getFullYear() === hoje.getFullYear() && d.getMonth() === hoje.getMonth()
+}
+
+// Aceita 1 link por linha. Formato opcional: "Rótulo | https://...".
+// Sem rótulo, usa o nome do arquivo do link como texto do botão.
+function parseLinks(raw: string | null): { label: string; url: string }[] {
+  if (!raw) return []
+  return raw
+    .split(/\r?\n/)
+    .map((linha) => linha.trim())
+    .filter(Boolean)
+    .map((linha) => {
+      const partes = linha.split('|')
+      if (partes.length >= 2) {
+        const label = partes[0].trim()
+        const url = partes.slice(1).join('|').trim()
+        return { label: label || 'Link', url }
+      }
+      const url = linha
+      let label = 'Link'
+      try {
+        const arquivo = decodeURIComponent(new URL(url).pathname.split('/').pop() || '')
+        if (arquivo) label = arquivo.replace(/\.[a-z0-9]+$/i, '').replace(/[_-]+/g, ' ')
+      } catch {}
+      return { label, url }
+    })
+}
+
+function Links({
+  raw,
+  wrapStyle,
+  btnStyle,
+}: {
+  raw: string | null
+  wrapStyle: CSSProperties
+  btnStyle: CSSProperties
+}) {
+  const links = parseLinks(raw)
+  if (links.length === 0) return null
+  return (
+    <div style={wrapStyle}>
+      {links.map((l) => (
+        <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" style={btnStyle}>
+          {l.label}
+        </a>
+      ))}
+    </div>
+  )
+}
 
 export default function Home() {
   const [produtos, setProdutos] = useState<Produto[]>([])
@@ -50,21 +138,24 @@ export default function Home() {
       const ib = ORDEM_CATEGORIAS.indexOf(b)
       return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
     })
-    return ['TODOS', ...presentes]
+    return ['TODOS', ...presentes, NOVOS, SAIRAM]
   }, [produtos])
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
     return produtos
       .filter((p) => {
-        const okCat = categoria === 'TODOS' || p.categoria === categoria
         const okBusca =
           !termo ||
           p.nome.toLowerCase().includes(termo) ||
           p.codigo.toLowerCase().includes(termo) ||
           (p.novo_nome?.toLowerCase().includes(termo) ?? false) ||
           (p.descricao?.toLowerCase().includes(termo) ?? false)
-        return okCat && okBusca
+        if (!okBusca) return false
+        if (categoria === NOVOS) return p.ativo !== false && ehDesteMes(p.adicionado_em)
+        if (categoria === SAIRAM) return p.ativo === false && ehDesteMes(p.removido_em)
+        if (p.ativo === false) return false
+        return categoria === 'TODOS' || p.categoria === categoria
       })
       .sort((a, b) =>
         (a.novo_nome || a.nome).localeCompare(b.novo_nome || b.nome, 'pt', {
@@ -74,57 +165,78 @@ export default function Home() {
   }, [produtos, busca, categoria])
 
   return (
-    <main style={s.main}>
-      <h1 style={s.titulo}>Catálogo DJI</h1>
-      <p style={s.subtitulo}>
-        Selecione um produto para ver os itens obrigatórios e opcionais.
-      </p>
-
-      <input
-        style={s.busca}
-        placeholder="Buscar por nome, código ou descrição…"
-        value={busca}
-        onChange={(e) => setBusca(e.target.value)}
-      />
-
-      <div style={s.filtros}>
-        {categorias.map((c) => (
-          <button
-            key={c}
-            onClick={() => setCategoria(c)}
-            style={{ ...s.filtroBtn, ...(categoria === c ? s.filtroBtnAtivo : {}) }}
-          >
-            {c.toUpperCase()}
-          </button>
-        ))}
-      </div>
-
-      <p style={s.contagem}>
-        Mostrando: <strong>{categoria}</strong> — {filtrados.length} item(s)
-      </p>
-
-      {carregando ? (
-        <p>Carregando…</p>
-      ) : (
-        <div style={s.grid}>
-          {filtrados.map((p) => (
-            <button key={p.codigo} style={s.card} onClick={() => setSelecionado(p)}>
-              <div style={s.imgWrap}>
-                {p.imagem_url ? (
-                  <img src={p.imagem_url} alt={p.nome} style={s.img} />
-                ) : (
-                  <span style={s.imgPlaceholder}>sem imagem</span>
-                )}
-              </div>
-              <div style={s.cardCorpo}>
-                <span style={s.cardCat}>{p.categoria}</span>
-                <span style={s.cardNome}>{p.novo_nome || p.nome}</span>
-                <span style={s.cardCodigo}>{p.codigo}</span>
-              </div>
-            </button>
-          ))}
+    <main className="cat-main" style={s.main}>
+      <header className="cat-cabecalho" style={s.cabecalho}>
+        <div>
+          <h1 style={s.titulo}>Produtos DJI Enterprise</h1>
+          <p style={s.subtitulo}>
+            Selecione um produto para ver os itens obrigatórios e itens opcionais.<br></br>
+            <em>Fotos meramente ilustrativas. Consulte o link de cada produto para mais informações.</em>
+          </p>
         </div>
-      )}
+        <img
+          src="/logo-dji-intelbras.png"
+          alt="DJI Enterprise — Distribuído por Intelbras"
+          style={s.logo}
+        />
+      </header>
+
+      <div className="cat-layout" style={s.layout}>
+        <aside className="cat-sidebar" style={s.sidebar}>
+          <div className="cat-filtros" style={s.filtros}>
+            {categorias.map((c) => (
+              <button
+                key={c}
+                onClick={() => setCategoria(c)}
+                style={{ ...s.filtroBtn, ...(categoria === c ? s.filtroBtnAtivo : {}) }}
+              >
+                {nomeFiltro(c).toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        <div className="cat-content" style={s.content}>
+          <input
+            style={s.busca}
+            placeholder="Buscar por nome, código ou descrição…"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+
+          <p style={s.contagem}>
+            Mostrando: <strong>{categoria}</strong> — {filtrados.length} item(s)
+          </p>
+
+          {carregando ? (
+            <p>Carregando…</p>
+          ) : (
+            <div className="cat-grid" style={s.grid}>
+              {filtrados.map((p) => (
+                <button key={p.codigo} style={s.card} onClick={() => setSelecionado(p)}>
+                  <div style={s.imgWrap}>
+                    {p.ativo === false ? (
+                      <span style={s.badgeSaiu}>SAIU</span>
+                    ) : ehDesteMes(p.adicionado_em) ? (
+                      <span style={s.badgeNovo}>NOVO</span>
+                    ) : null}
+                    {p.imagem_url ? (
+                      <img src={p.imagem_url} alt={p.nome} style={s.img} />
+                    ) : (
+                      <span style={s.imgPlaceholder}>sem imagem</span>
+                    )}
+                  </div>
+                  <div style={s.cardCorpo}>
+                    <span style={s.cardCat}>{rotuloCategoria(p.categoria)}</span>
+                    <span style={s.cardNome}>{p.novo_nome || p.nome}</span>
+                    <span style={s.cardCodigo}>{p.codigo}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {selecionado && (
         <Detalhe produto={selecionado} onFechar={() => setSelecionado(null)} />
@@ -143,7 +255,7 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
     supabase
       .from('relacoes')
       .select(
-        'tipo, quantidade, item:produtos!relacoes_produto_codigo_fkey(codigo, nome, descricao, imagem_url, categoria, novo_nome)'
+        'tipo, quantidade, item:produtos!relacoes_produto_codigo_fkey(codigo, nome, descricao, imagem_url, categoria, novo_nome, links)'
       )
       .eq('principal_codigo', produto.codigo)
       .then(({ data, error }) => {
@@ -168,15 +280,14 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
   }, [produto.codigo])
 
   const obrigatorios = itens.filter((i) => i.tipo === 'obrigatorio')
-  const opcionais = itens.filter((i) => i.tipo === 'opcional')
-  const outros = itens.filter((i) => i.tipo !== 'obrigatorio' && i.tipo !== 'opcional')
+  const compativeis = itens.filter((i) => i.tipo !== 'obrigatorio')
 
   return (
     <>
     <div style={s.overlay} onClick={onFechar}>
-      <div style={s.modal} onClick={(e) => e.stopPropagation()}>
+      <div className="cat-modal" style={s.modal} onClick={(e) => e.stopPropagation()}>
         <button style={s.fechar} onClick={onFechar}>×</button>
-        <div style={s.modalHeader}>
+        <div className="cat-modal-header" style={s.modalHeader}>
           {produto.imagem_url && (
             <img
               src={produto.imagem_url}
@@ -186,10 +297,11 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
             />
           )}
           <div>
-            <span style={s.cardCat}>{produto.categoria}</span>
+            <span style={s.cardCat}>{rotuloCategoria(produto.categoria)}</span>
             <h2 style={s.modalTitulo}>{produto.novo_nome || produto.nome}</h2>
             <span style={s.cardCodigo}>Código: {produto.codigo}</span>
             {produto.descricao && <p style={s.modalDesc}>{produto.descricao}</p>}
+            <Links raw={produto.links} wrapStyle={s.links} btnStyle={s.linkBtn} />
           </div>
         </div>
 
@@ -198,10 +310,7 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
         ) : (
           <>
             <Secao titulo="Itens obrigatórios" itens={obrigatorios} vazio="Nenhum item obrigatório cadastrado." />
-            <Secao titulo="Acessórios opcionais" itens={opcionais} vazio="Nenhum acessório opcional cadastrado." />
-            {outros.length > 0 && (
-              <Secao titulo="Outros itens relacionados" itens={outros} vazio="" />
-            )}
+            <Secao titulo="Outros itens compatíveis" itens={compativeis} vazio="Nenhum outro item compatível cadastrado." />
           </>
         )}
       </div>
@@ -247,6 +356,7 @@ function Secao({
                 </div>
                 <div style={s.itemCodigo}>{i.item.codigo}</div>
                 {i.item.descricao && <div style={s.itemDesc}>{i.item.descricao}</div>}
+                <Links raw={i.item.links} wrapStyle={s.itemLinks} btnStyle={s.linkBtnSm} />
               </div>
             </li>
           ))}
@@ -257,30 +367,39 @@ function Secao({
 }
 
 const s: Record<string, CSSProperties> = {
-  main: { maxWidth: 1200, margin: '0 auto', padding: '32px 20px', fontFamily: 'system-ui, sans-serif', color: '#000000' },
-  titulo: { fontSize: 50, fontWeight: 700, margin: 0 },
-  subtitulo: { color: '#171717', marginTop: 4, marginBottom: 24 },
-  busca: { width: '100%', padding: '12px 16px', fontSize: 16, border: '1px solid #000', borderRadius: 10, marginBottom: 16, boxSizing: 'border-box' },
-  filtros: { display: 'flex', flexWrap: 'nowrap', gap: 8, marginBottom: 12, overflowX: 'auto', paddingBottom: 4 },
-  filtroBtn: { padding: '8px 14px', fontSize: 13, fontWeight: 600, border: '1px solid #000', borderRadius: 999, background: '#ffffff', color: '#444', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap'  },
-  filtroBtnAtivo: { background: '#155dfc', color: '#fff', border: '1px solid #155dfc' },
-  contagem: { color: '#444', fontSize: 14, margin: '8px 0 20px' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 16 },
+  main: { maxWidth: 1200, margin: '0 auto', padding: '32px 20px', fontFamily: 'system-ui, sans-serif', color: '#111' },
+  cabecalho: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24, marginBottom: 24 },
+  logo: { height: 90, width: 'auto', flexShrink: 0 },
+  titulo: { fontSize: 32, fontWeight: 700, margin: 0 },
+  subtitulo: { color: '#666', marginTop: 4, marginBottom: 0 },
+  busca: { width: '100%', padding: '12px 16px', fontSize: 16, border: '1px solid #ddd', borderRadius: 10, marginBottom: 16, boxSizing: 'border-box' },
+  layout: { display: 'flex', gap: 24, alignItems: 'flex-start' },
+  sidebar: { width: 200, flexShrink: 0, position: 'sticky', top: 20 },
+  content: { flex: 1, minWidth: 0 },
+  filtros: { display: 'flex', flexDirection: 'column', gap: 6 },
+  filtroBtn: { padding: '9px 14px', fontSize: 13, fontWeight: 600, border: '1px solid #ddd', borderRadius: 10, background: '#fff', color: '#444', cursor: 'pointer', textAlign: 'left', width: '100%' },
+  filtroBtnAtivo: { background: '#111', color: '#fff', border: '1px solid #111' },
+  contagem: { color: '#666', fontSize: 14, margin: '8px 0 20px' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(180px, 1fr))', gap: 16 },
   card: { textAlign: 'left', border: '1px solid #eee', borderRadius: 14, overflow: 'hidden', background: '#fff', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column' },
-  imgWrap: { background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 160, maxHeight: 160, overflow: 'hidden' },
-  img: { width: '100%', height: '100%', objectFit: 'contain' },
+  imgWrap: { height: 150, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8, boxSizing: 'border-box', position: 'relative' },
+  img: { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' },
   imgPlaceholder: { color: '#bbb', fontSize: 13 },
+  badgeNovo: { position: 'absolute', top: 8, left: 8, background: '#155dfc', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 999, letterSpacing: 0.5 },
+  badgeSaiu: { position: 'absolute', top: 8, left: 8, background: '#c33', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 999, letterSpacing: 0.5 },
   cardCorpo: { padding: 12, display: 'flex', flexDirection: 'column', gap: 4 },
   cardCat: { fontSize: 11, fontWeight: 700, color: '#155dfc', textTransform: 'uppercase', letterSpacing: 0.5 },
   cardNome: { fontSize: 14, fontWeight: 600, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 36 },
-  cardCodigo: { fontSize: 12, color: '#444' },
+  cardCodigo: { fontSize: 12, color: '#999' },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 50 },
   modal: { background: '#fff', borderRadius: 16, maxWidth: 720, width: '100%', maxHeight: '85vh', overflowY: 'auto', padding: 28, position: 'relative' },
   fechar: { position: 'absolute', top: 14, right: 16, border: 'none', background: 'transparent', fontSize: 28, lineHeight: 1, cursor: 'pointer', color: '#888' },
   modalHeader: { display: 'flex', gap: 16, marginBottom: 20 },
-  modalImg: { width: 120, height: 120, objectFit: 'contain', background: '#f5f5f5', borderRadius: 10, cursor: 'zoom-in' },
+  modalImg: { width: 120, height: 120, objectFit: 'contain', background: '#fff', borderRadius: 10, cursor: 'zoom-in' },
   modalTitulo: { fontSize: 22, fontWeight: 700, margin: '4px 0' },
   modalDesc: { color: '#555', fontSize: 14, marginTop: 6 },
+  links: { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  linkBtn: { fontSize: 13, fontWeight: 600, textDecoration: 'none', color: '#155dfc', border: '1px solid #155dfc', borderRadius: 8, padding: '6px 10px' },
   secao: { marginTop: 20 },
   secaoTitulo: { fontSize: 15, fontWeight: 700, borderBottom: '2px solid #f0f0f0', paddingBottom: 6, marginBottom: 10 },
   vazio: { color: '#aaa', fontSize: 14 },
@@ -294,6 +413,8 @@ const s: Record<string, CSSProperties> = {
   qtd: { color: '#155dfc', fontWeight: 700 },
   itemCodigo: { fontSize: 12, color: '#999' },
   itemDesc: { fontSize: 13, color: '#666', marginTop: 2 },
-  lightbox: { position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40, zIndex: 60, cursor: 'zoom-out' },
+  itemLinks: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  linkBtnSm: { fontSize: 12, fontWeight: 600, textDecoration: 'none', color: '#155dfc', border: '1px solid #155dfc', borderRadius: 6, padding: '3px 8px' },
+  lightbox: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40, zIndex: 60, cursor: 'zoom-out' },
   lightboxImg: { maxWidth: '80vw', maxHeight: '80vh', objectFit: 'contain', background: '#fff', borderRadius: 8 },
 }
