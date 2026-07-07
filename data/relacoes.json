@@ -1,0 +1,308 @@
+[
+	{
+		"produto_codigo": "4300006",
+		"principal_codigo": "4300045",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300015",
+		"principal_codigo": "4300045",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300051",
+		"principal_codigo": "4300045",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300059",
+		"principal_codigo": "4300045",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300166",
+		"principal_codigo": "4300045",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300174",
+		"principal_codigo": "4300045",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300380",
+		"principal_codigo": "4300045",
+		"tipo": "obrigatorio",
+		"quantidade": 1
+	},
+	{
+		"produto_codigo": "4300415",
+		"principal_codigo": "4300045",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300538",
+		"principal_codigo": "4300045",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300989",
+		"principal_codigo": "4300045",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4301218",
+		"principal_codigo": "4300045",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4301548",
+		"principal_codigo": "4300045",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300006",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300015",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300251",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300388",
+		"principal_codigo": "4300386",
+		"tipo": "obrigatorio",
+		"quantidade": 1
+	},
+	{
+		"produto_codigo": "4300418",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300420",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300453",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300493",
+		"principal_codigo": "4300386",
+		"tipo": null,
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300496",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300498",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300751",
+		"principal_codigo": "4300386",
+		"tipo": "obrigatorio",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300770",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300772",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300989",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300993",
+		"principal_codigo": "4300386",
+		"tipo": "obrigatorio",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4301001",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4301037",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4301038",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4301040",
+		"principal_codigo": "4300386",
+		"tipo": null,
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4301091",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4301107",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4301113",
+		"principal_codigo": "4300386",
+		"tipo": null,
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4301115",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4301453",
+		"principal_codigo": "4300386",
+		"tipo": null,
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4640018",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4640038",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4640044",
+		"principal_codigo": "4300386",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300006",
+		"principal_codigo": "4300466",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300015",
+		"principal_codigo": "4300466",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300051",
+		"principal_codigo": "4300466",
+		"tipo": null,
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300059",
+		"principal_codigo": "4300466",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300166",
+		"principal_codigo": "4300466",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300174",
+		"principal_codigo": "4300466",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300380",
+		"principal_codigo": "4300466",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300415",
+		"principal_codigo": "4300466",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300538",
+		"principal_codigo": "4300466",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4300989",
+		"principal_codigo": "4300466",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4301218",
+		"principal_codigo": "4300466",
+		"tipo": "opcional",
+		"quantidade": null
+	},
+	{
+		"produto_codigo": "4301548",
+		"principal_codigo": "4300466",
+		"tipo": "opcional",
+		"quantidade": null
+	}
+]

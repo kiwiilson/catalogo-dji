@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
-import { supabase } from '@/lib/supabaseClient'
+import produtosData from '@/data/produtos.json'
+import relacoesData from '@/data/relacoes.json'
 
 type Produto = {
   codigo: string
@@ -11,9 +12,8 @@ type Produto = {
   novo_nome: string | null
   imagem_url: string | null
   links: string | null
-  ativo: boolean | null
-  adicionado_em: string | null
-  removido_em: string | null
+  entrou_em: string | null // 1º dia do mês em que entrou (ou null)
+  saiu_em: string | null   // 1º dia do mês em que saiu (null = ainda vigente)
 }
 
 type ItemRelacionado = {
@@ -22,19 +22,36 @@ type ItemRelacionado = {
   item: Produto
 }
 
+// Dados locais: nada disso faz consulta a um banco externo em tempo de execução.
+// Pra atualizar o catálogo, edite no Supabase (Table Editor/SQL Editor) como sempre,
+// gere os 2 arquivos de novo (ver "Dados do catálogo" no topo desta página) e faça o deploy.
+const TODOS_PRODUTOS = produtosData as Produto[]
+const PRODUTOS_POR_CODIGO: Record<string, Produto> = Object.fromEntries(
+  TODOS_PRODUTOS.map((p) => [p.codigo, p])
+)
+type RelacaoBruta = {
+  produto_codigo: string
+  principal_codigo: string
+  tipo: 'obrigatorio' | 'opcional' | null
+  quantidade: number | null
+}
+const TODAS_RELACOES = relacoesData as RelacaoBruta[]
+
 // Código curto no banco (coluna "categoria") -> rótulo exibido no site.
 // Deixe a chave EXATAMENTE como está no banco. Se faltar, o site mostra o código cru.
+// Um produto pode ter mais de uma categoria: separe os códigos por vírgula na coluna
+// "categoria" (ex.: "fh2op,fh2aio"). Ele aparece nos dois filtros e mostra as duas etiquetas.
 const ROTULOS_CATEGORIAS: Record<string, string> = {
   drone: 'Drone',
   dock: 'Dock',
   terra: 'DJI Terra',
   payloads: 'Payloads',
-  fh2: 'FlightHub 2',
+  fh2: 'FlightHub 2 - Nuvem',
   fh2op: 'FlightHub 2 - On-Premises',
   fh2aio: 'FlightHub 2 - All in One',
   acessorios: 'Acessórios',
   servicos: 'Serviços',
-  outros: 'Outros'
+  outros: 'Outros',
 }
 
 // Ordem dos filtros (use os MESMOS códigos do banco).
@@ -50,17 +67,34 @@ function rotuloCategoria(cod: string | null) {
   return ROTULOS_CATEGORIAS[cod] ?? cod
 }
 
+// Um produto pode estar em mais de uma categoria: a coluna "categoria" aceita
+// vários códigos separados por vírgula (ex.: "fh2op,fh2aio").
+function categoriasDe(p: Produto): string[] {
+  return (p.categoria ?? '')
+    .split(',')
+    .map((c) => c.trim())
+    .filter(Boolean)
+}
+
 // Nome exibido em cada botão de filtro (TODOS/Novos/Saíram passam direto).
 function nomeFiltro(c: string) {
   if (c === 'TODOS' || c === NOVOS || c === SAIRAM) return c
   return rotuloCategoria(c)
 }
 
-function ehDesteMes(data: string | null) {
-  if (!data) return false
-  const d = new Date(data)
+// Primeiro dia do mês atual e do próximo, no formato 'YYYY-MM-DD'.
+// Montado a partir do horário local (sem new Date(string)) pra não escorregar de mês por fuso.
+function limitesMesAtual() {
   const hoje = new Date()
-  return d.getFullYear() === hoje.getFullYear() && d.getMonth() === hoje.getMonth()
+  const ano = hoje.getFullYear()
+  const mes = hoje.getMonth()
+  const fmt = (a: number, m: number) => `${a}-${String(m + 1).padStart(2, '0')}-01`
+  return { ini: fmt(ano, mes), fim: mes === 11 ? fmt(ano + 1, 0) : fmt(ano, mes + 1) }
+}
+
+// Uma data 'YYYY-MM-DD' cai no mês atual? (comparação de string, sem depender de fuso)
+function noMes(data: string | null, ini: string, fim: string) {
+  return !!data && data >= ini && data < fim
 }
 
 // Aceita 1 link por linha. Formato opcional: "Rótulo | https://...".
@@ -110,6 +144,25 @@ function Links({
   )
 }
 
+function SemFoto({ size = 32 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#ccc"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <path d="M21 15l-5-5L5 21" />
+    </svg>
+  )
+}
+
 export default function Home() {
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [busca, setBusca] = useState('')
@@ -117,22 +170,21 @@ export default function Home() {
   const [carregando, setCarregando] = useState(true)
   const [selecionado, setSelecionado] = useState<Produto | null>(null)
 
+  // Limites do mês atual (1º dia deste mês e do próximo) pra "Novos"/"Saíram".
+  const { ini, fim } = useMemo(() => limitesMesAtual(), [])
+
   useEffect(() => {
-    supabase
-      .from('produtos')
-      .select('*')
-      .order('nome')
-      .then(({ data, error }) => {
-        if (error) console.error(error)
-        setProdutos(data ?? [])
-        setCarregando(false)
-      })
+    // Os produtos já vêm prontos do arquivo local (data/produtos.json) — sem
+    // rede, sem banco externo. As colunas entrou_em / saiu_em dizem quando cada
+    // produto entrou e saiu — quem saiu continua na galeria.
+    setProdutos(TODOS_PRODUTOS)
+    setCarregando(false)
   }, [])
 
   const categorias = useMemo(() => {
     const presentes = Array.from(
-      new Set(produtos.map((p) => p.categoria).filter(Boolean))
-    ) as string[]
+      new Set(produtos.flatMap((p) => categoriasDe(p)))
+    )
     presentes.sort((a, b) => {
       const ia = ORDEM_CATEGORIAS.indexOf(a)
       const ib = ORDEM_CATEGORIAS.indexOf(b)
@@ -143,26 +195,32 @@ export default function Home() {
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
-    return produtos
-      .filter((p) => {
-        const okBusca =
-          !termo ||
-          p.nome.toLowerCase().includes(termo) ||
-          p.codigo.toLowerCase().includes(termo) ||
-          (p.novo_nome?.toLowerCase().includes(termo) ?? false) ||
-          (p.descricao?.toLowerCase().includes(termo) ?? false)
-        if (!okBusca) return false
-        if (categoria === NOVOS) return p.ativo !== false && ehDesteMes(p.adicionado_em)
-        if (categoria === SAIRAM) return p.ativo === false && ehDesteMes(p.removido_em)
-        if (p.ativo === false) return false
-        return categoria === 'TODOS' || p.categoria === categoria
-      })
-      .sort((a, b) =>
+
+    const bateBusca = (p: Produto) =>
+      !termo ||
+      p.nome.toLowerCase().includes(termo) ||
+      p.codigo.toLowerCase().includes(termo) ||
+      (p.novo_nome?.toLowerCase().includes(termo) ?? false) ||
+      (p.descricao?.toLowerCase().includes(termo) ?? false)
+
+    const ordena = (lista: Produto[]) =>
+      [...lista].sort((a, b) =>
         (a.novo_nome || a.nome).localeCompare(b.novo_nome || b.nome, 'pt', {
           sensitivity: 'base',
         })
       )
-  }, [produtos, busca, categoria])
+
+    return ordena(
+      produtos.filter((p) => {
+        if (!bateBusca(p)) return false
+        // "Novos" = entrou este mês; "Saíram" = saiu este mês. Nos dois casos o
+        // produto continua na tabela e também nas categorias normais.
+        if (categoria === NOVOS) return noMes(p.entrou_em, ini, fim)
+        if (categoria === SAIRAM) return noMes(p.saiu_em, ini, fim)
+        return categoria === 'TODOS' || categoriasDe(p).includes(categoria)
+      })
+    )
+  }, [produtos, busca, categoria, ini, fim])
 
   return (
     <main className="cat-main" style={s.main}>
@@ -170,8 +228,8 @@ export default function Home() {
         <div>
           <h1 style={s.titulo}>Produtos DJI Enterprise</h1>
           <p style={s.subtitulo}>
-            Selecione um produto para ver os itens obrigatórios e itens opcionais.<br></br>
-            <em>Fotos meramente ilustrativas. Consulte o link de cada produto para mais informações.</em>
+            Selecione um produto para ver os itens obrigatórios e opcionais.<br></br>
+            <em>Fotos meramente ilustrativas. Consulte os links dos produtos para obter informações detalhadas.</em>
           </p>
         </div>
         <img
@@ -215,19 +273,19 @@ export default function Home() {
               {filtrados.map((p) => (
                 <button key={p.codigo} style={s.card} onClick={() => setSelecionado(p)}>
                   <div style={s.imgWrap}>
-                    {p.ativo === false ? (
+                    {noMes(p.saiu_em, ini, fim) ? (
                       <span style={s.badgeSaiu}>SAIU</span>
-                    ) : ehDesteMes(p.adicionado_em) ? (
+                    ) : noMes(p.entrou_em, ini, fim) ? (
                       <span style={s.badgeNovo}>NOVO</span>
                     ) : null}
                     {p.imagem_url ? (
                       <img src={p.imagem_url} alt={p.nome} style={s.img} />
                     ) : (
-                      <span style={s.imgPlaceholder}>sem imagem</span>
+                      <SemFoto size={40} />
                     )}
                   </div>
                   <div style={s.cardCorpo}>
-                    <span style={s.cardCat}>{rotuloCategoria(p.categoria)}</span>
+                    <span style={s.cardCat}>{categoriasDe(p).map(rotuloCategoria).join(' / ')}</span>
                     <span style={s.cardNome}>{p.novo_nome || p.nome}</span>
                     <span style={s.cardCodigo}>{p.codigo}</span>
                   </div>
@@ -252,31 +310,24 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
 
   useEffect(() => {
     setCarregando(true)
-    supabase
-      .from('relacoes')
-      .select(
-        'tipo, quantidade, item:produtos!relacoes_produto_codigo_fkey(codigo, nome, descricao, imagem_url, categoria, novo_nome, links)'
+    const norm: ItemRelacionado[] = TODAS_RELACOES.filter(
+      (r) => r.principal_codigo === produto.codigo
+    )
+      .map((r) => ({
+        tipo: r.tipo,
+        quantidade: r.quantidade,
+        item: PRODUTOS_POR_CODIGO[r.produto_codigo],
+      }))
+      .filter((r): r is ItemRelacionado => !!r.item)
+    norm.sort((a, b) =>
+      (a.item.novo_nome || a.item.nome).localeCompare(
+        b.item.novo_nome || b.item.nome,
+        'pt',
+        { sensitivity: 'base' }
       )
-      .eq('principal_codigo', produto.codigo)
-      .then(({ data, error }) => {
-        if (error) console.error(error)
-        const norm: ItemRelacionado[] = (data ?? [])
-          .map((r: any) => ({
-            tipo: r.tipo,
-            quantidade: r.quantidade,
-            item: Array.isArray(r.item) ? r.item[0] : r.item,
-          }))
-          .filter((r) => r.item)
-        norm.sort((a, b) =>
-          (a.item.novo_nome || a.item.nome).localeCompare(
-            b.item.novo_nome || b.item.nome,
-            'pt',
-            { sensitivity: 'base' }
-          )
-        )
-        setItens(norm)
-        setCarregando(false)
-      })
+    )
+    setItens(norm)
+    setCarregando(false)
   }, [produto.codigo])
 
   const obrigatorios = itens.filter((i) => i.tipo === 'obrigatorio')
@@ -288,16 +339,20 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
       <div className="cat-modal" style={s.modal} onClick={(e) => e.stopPropagation()}>
         <button style={s.fechar} onClick={onFechar}>×</button>
         <div className="cat-modal-header" style={s.modalHeader}>
-          {produto.imagem_url && (
+          {produto.imagem_url ? (
             <img
               src={produto.imagem_url}
               alt={produto.nome}
               style={s.modalImg} 
               onClick={() => setFotoZoom(produto.imagem_url)}
             />
+          ) : (
+            <div style={s.modalImgVazia}>
+              <SemFoto size={40} />
+            </div>
           )}
           <div>
-            <span style={s.cardCat}>{rotuloCategoria(produto.categoria)}</span>
+            <span style={s.cardCat}>{categoriasDe(produto).map(rotuloCategoria).join(' / ')}</span>
             <h2 style={s.modalTitulo}>{produto.novo_nome || produto.nome}</h2>
             <span style={s.cardCodigo}>Código: {produto.codigo}</span>
             {produto.descricao && <p style={s.modalDesc}>{produto.descricao}</p>}
@@ -346,7 +401,7 @@ function Secao({
                 {i.item.imagem_url ? (
                   <img src={i.item.imagem_url} alt={i.item.nome} style={s.itemImg} />
                 ) : (
-                  <span style={s.imgPlaceholderSm}>—</span>
+                  <SemFoto size={20} />
                 )}
               </div>
               <div style={s.itemCorpo}>
@@ -377,14 +432,13 @@ const s: Record<string, CSSProperties> = {
   sidebar: { width: 200, flexShrink: 0, position: 'sticky', top: 20 },
   content: { flex: 1, minWidth: 0 },
   filtros: { display: 'flex', flexDirection: 'column', gap: 6 },
-  filtroBtn: { padding: '9px 14px', fontSize: 13, fontWeight: 600, border: '1px solid #ddd', borderRadius: 10, background: '#fff', color: '#444', cursor: 'pointer', textAlign: 'left', width: '100%' },
+  filtroBtn: { padding: '9px', fontSize: 13, fontWeight: 600, border: '1px solid #ddd', borderRadius: 10, background: '#fff', color: '#444', cursor: 'pointer', textAlign: 'center', width: '100%' },
   filtroBtnAtivo: { background: '#111', color: '#fff', border: '1px solid #111' },
   contagem: { color: '#666', fontSize: 14, margin: '8px 0 20px' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(180px, 1fr))', gap: 16 },
   card: { textAlign: 'left', border: '1px solid #eee', borderRadius: 14, overflow: 'hidden', background: '#fff', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column' },
   imgWrap: { height: 150, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8, boxSizing: 'border-box', position: 'relative' },
   img: { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' },
-  imgPlaceholder: { color: '#bbb', fontSize: 13 },
   badgeNovo: { position: 'absolute', top: 8, left: 8, background: '#155dfc', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 999, letterSpacing: 0.5 },
   badgeSaiu: { position: 'absolute', top: 8, left: 8, background: '#c33', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 999, letterSpacing: 0.5 },
   cardCorpo: { padding: 12, display: 'flex', flexDirection: 'column', gap: 4 },
@@ -396,6 +450,7 @@ const s: Record<string, CSSProperties> = {
   fechar: { position: 'absolute', top: 14, right: 16, border: 'none', background: 'transparent', fontSize: 28, lineHeight: 1, cursor: 'pointer', color: '#888' },
   modalHeader: { display: 'flex', gap: 16, marginBottom: 20 },
   modalImg: { width: 120, height: 120, objectFit: 'contain', background: '#fff', borderRadius: 10, cursor: 'zoom-in' },
+  modalImgVazia: { width: 120, height: 120, background: '#fafafa', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   modalTitulo: { fontSize: 22, fontWeight: 700, margin: '4px 0' },
   modalDesc: { color: '#555', fontSize: 14, marginTop: 6 },
   links: { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 },
@@ -408,7 +463,6 @@ const s: Record<string, CSSProperties> = {
   itemCorpo: { flex: 1 },
   itemImgWrap: { width: 48, height: 48, borderRadius: 8, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   itemImg: { width: '100%', height: '100%', objectFit: 'contain' },
-  imgPlaceholderSm: { color: '#ccc', fontSize: 12 },
   itemNome: { fontSize: 14, fontWeight: 600 },
   qtd: { color: '#155dfc', fontWeight: 700 },
   itemCodigo: { fontSize: 12, color: '#999' },
