@@ -689,7 +689,7 @@
 		"novo_nome": null,
 		"imagem_url": "https://pub-316bdf1dbe024e7cb59e322eed79dbc1.r2.dev/4300642.webp",
 		"entrou_em": null,
-		"saiu_em": "2026-07-01",
+		"saiu_em": null,
 		"links": null
 	},
 	{
@@ -700,7 +700,7 @@
 		"novo_nome": null,
 		"imagem_url": "https://pub-316bdf1dbe024e7cb59e322eed79dbc1.r2.dev/4640011.webp",
 		"entrou_em": null,
-		"saiu_em": "2026-07-01",
+		"saiu_em": null,
 		"links": null
 	},
 	{
@@ -711,14 +711,14 @@
 		"novo_nome": null,
 		"imagem_url": "https://pub-316bdf1dbe024e7cb59e322eed79dbc1.r2.dev/4300744.webp",
 		"entrou_em": null,
-		"saiu_em": "2026-07-01",
+		"saiu_em": null,
 		"links": null
 	},
 	{
 		"codigo": "4300386",
 		"nome": "DRONE DJI MATRICE 400",
 		"categoria": "drone",
-		"descricao": null,
+		"descricao": "ITENS DA CAIXA: 1 - matrice 400 / 1 - maleta de transporte para o drone / 1 - controle RC plus 2 / 1 - antena sub2g (já acoplada no controle) / 1 - suporte/correia para o controle / 1 - bateria WB37 / 2 - pares de hélice reserva / 6 - kits de manutenção de hélice / 2 - trens de pouso / 1 - cabo usb-c para usb-c / 4 - amortecedor de gimbal / 1 - tampa do conector de payload / 1 - chave para manutenção do drone / 4 - parafusos para manutenção do drone / 1 - kit de limpeza para o drone",
 		"novo_nome": null,
 		"imagem_url": "https://pub-316bdf1dbe024e7cb59e322eed79dbc1.r2.dev/4300386.webp",
 		"entrou_em": null,
@@ -729,7 +729,7 @@
 		"codigo": "4300499",
 		"nome": "DRONE DJI MATRICE 400 RTK (DEMO)",
 		"categoria": "drone",
-		"descricao": null,
+		"descricao": "ITENS DA CAIXA: 1 - matrice 400 / 1 - maleta de transporte para o drone / 1 - controle RC plus 2 / 1 - antena sub2g (já acoplada no controle) / 1 - suporte/correia para o controle / 1 - bateria WB37 / 2 - pares de hélice reserva / 6 - kits de manutenção de hélice / 2 - trens de pouso / 1 - cabo usb-c para usb-c / 4 - amortecedor de gimbal / 1 - tampa do conector de payload / 1 - chave para manutenção do drone / 4 - parafusos para manutenção do drone / 1 - kit de limpeza para o drone",
 		"novo_nome": null,
 		"imagem_url": "https://pub-316bdf1dbe024e7cb59e322eed79dbc1.r2.dev/4300499.webp",
 		"entrou_em": null,
