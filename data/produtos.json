@@ -289,7 +289,7 @@
 		"codigo": "4301245",
 		"nome": "CHAVE HARDWARE DJI FLIGHTHUB 2 ALL-IN-ONE DONGLE 1 DEVICE",
 		"categoria": "fh2aio",
-		"descricao": null,
+		"descricao": "Este item é somente o dongle de hardware para o FlightHub 2 All-in-One. Para usar o FlightHub 2, você precisará adquirir o servidor.",
 		"novo_nome": null,
 		"imagem_url": "https://pub-316bdf1dbe024e7cb59e322eed79dbc1.r2.dev/4301245.webp",
 		"entrou_em": null,
@@ -300,7 +300,7 @@
 		"codigo": "4301149",
 		"nome": "CHAVE HARDWARE DJI FLIGHTHUB 2 ALL-IN-ONE DONGLE 1 DEVICE DEMO",
 		"categoria": "fh2aio",
-		"descricao": null,
+		"descricao": "Este item é somente o dongle de hardware para o FlightHub 2 All-in-One. Para usar o FlightHub 2, você precisará adquirir o servidor.",
 		"novo_nome": null,
 		"imagem_url": "https://pub-316bdf1dbe024e7cb59e322eed79dbc1.r2.dev/4301149.webp",
 		"entrou_em": null,
@@ -687,7 +687,7 @@
 		"categoria": "drone",
 		"descricao": null,
 		"novo_nome": null,
-		"imagem_url": null,
+		"imagem_url": "https://pub-316bdf1dbe024e7cb59e322eed79dbc1.r2.dev/4300642.webp",
 		"entrou_em": null,
 		"saiu_em": "2026-07-01",
 		"links": null
@@ -698,7 +698,7 @@
 		"categoria": "drone",
 		"descricao": null,
 		"novo_nome": null,
-		"imagem_url": null,
+		"imagem_url": "https://pub-316bdf1dbe024e7cb59e322eed79dbc1.r2.dev/4640011.webp",
 		"entrou_em": null,
 		"saiu_em": "2026-07-01",
 		"links": null
@@ -709,7 +709,7 @@
 		"categoria": "drone",
 		"descricao": null,
 		"novo_nome": null,
-		"imagem_url": null,
+		"imagem_url": "https://pub-316bdf1dbe024e7cb59e322eed79dbc1.r2.dev/4300744.webp",
 		"entrou_em": null,
 		"saiu_em": "2026-07-01",
 		"links": null
@@ -959,7 +959,7 @@
 	{
 		"codigo": "9100577",
 		"nome": "FlightHub 2 On-Premises Version Device Expansion Package(1 Device)-oversea",
-		"categoria": "fh2op,fh2aio",
+		"categoria": "fh2op",
 		"descricao": null,
 		"novo_nome": null,
 		"imagem_url": "https://pub-316bdf1dbe024e7cb59e322eed79dbc1.r2.dev/9100577.webp",
@@ -1342,15 +1342,15 @@
 		"links": null
 	},
 	{
-		"codigo": "000000",
+		"codigo": "0000000",
 		"nome": "LINKS IMPORTANTES",
 		"categoria": "links",
 		"descricao": null,
 		"novo_nome": null,
-		"imagem_url": null,
+		"imagem_url": "https://pub-316bdf1dbe024e7cb59e322eed79dbc1.r2.dev/0000000.webp",
 		"entrou_em": null,
 		"saiu_em": null,
-		"links": "Biblioteca de conteúdos | https://tinyurl.com/bibliotecaresultados\r\nPortal DJI | https://training.djiits.com/main/#/index\r\n"
+		"links": "Biblioteca de conteúdos | https://tinyurl.com/bibliotecaresultados\r\nPortal de Treinamento DJI | https://training.djiits.com/main/#/index\r\n"
 	},
 	{
 		"codigo": "4300741",
@@ -1481,14 +1481,14 @@
 		"novo_nome": null,
 		"imagem_url": "https://pub-316bdf1dbe024e7cb59e322eed79dbc1.r2.dev/9100843.webp",
 		"entrou_em": null,
-		"saiu_em": null,
+		"saiu_em": "2026-07-01",
 		"links": null
 	},
 	{
 		"codigo": "4301108",
 		"nome": "SERVIDOR DJI FLIGHTHUB 2 AIO",
 		"categoria": "fh2aio",
-		"descricao": null,
+		"descricao": "Dos itens obrigatórios abaixo, você pode escolher entre o DEMO ou não. Somente o dongle tem a opção demo, o servidor não.",
 		"novo_nome": null,
 		"imagem_url": "https://pub-316bdf1dbe024e7cb59e322eed79dbc1.r2.dev/4301108.webp",
 		"entrou_em": null,

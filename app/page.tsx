@@ -52,11 +52,12 @@ const ROTULOS_CATEGORIAS: Record<string, string> = {
   acessorios: 'Acessórios',
   servicos: 'Serviços',
   outros: 'Outros',
+  links: 'Links Úteis',
 }
 
 // Ordem dos filtros (use os MESMOS códigos do banco).
 const ORDEM_CATEGORIAS = [
-  'drone', 'dock', 'terra', 'payloads', 'fh2', 'fh2op', 'fh2aio', 'acessorios', 'servicos', 'outros',
+  'drone', 'dock', 'terra', 'payloads', 'fh2', 'fh2op', 'fh2aio', 'acessorios', 'servicos', 'outros', 'links',
 ]
 
 const NOVOS = 'Novos na tabela'
@@ -144,22 +145,13 @@ function Links({
   )
 }
 
-function SemFoto({ size = 32 }: { size?: number }) {
+function SemFoto({ size }: { size: number }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#ccc"
-      strokeWidth={1.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <circle cx="8.5" cy="8.5" r="1.5" />
-      <path d="M21 15l-5-5L5 21" />
-    </svg>
+    <img
+      src="https://pub-316bdf1dbe024e7cb59e322eed79dbc1.r2.dev/sem-foto.webp"
+      alt="Sem foto"
+      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+    />
   )
 }
 
@@ -228,8 +220,9 @@ export default function Home() {
         <div>
           <h1 style={s.titulo}>Produtos DJI Enterprise</h1>
           <p style={s.subtitulo}>
-            Selecione um produto para ver os itens obrigatórios e opcionais.<br></br>
-            <em>Fotos meramente ilustrativas. Consulte os links dos produtos para obter informações detalhadas.</em>
+            <em>Selecione um produto para ver os itens obrigatórios e opcionais.</em><br></br>
+            <em>Clique na imagem para ampliar. Links abrem em nova aba.</em><br></br>
+            <em>Fotos meramente ilustrativas. Verifique as especificações técnicas para maiores detalhes.</em>
           </p>
         </div>
         <img
@@ -424,7 +417,7 @@ function Secao({
 const s: Record<string, CSSProperties> = {
   main: { maxWidth: 1200, margin: '0 auto', padding: '32px 20px', fontFamily: 'system-ui, sans-serif', color: '#111' },
   cabecalho: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24, marginBottom: 24 },
-  logo: { height: 90, width: 'auto', flexShrink: 0 },
+  logo: { height: 145, width: 'auto', flexShrink: 0 },
   titulo: { fontSize: 32, fontWeight: 700, margin: 0 },
   subtitulo: { color: '#666', marginTop: 4, marginBottom: 0 },
   busca: { width: '100%', padding: '12px 16px', fontSize: 16, border: '1px solid #ddd', borderRadius: 10, marginBottom: 16, boxSizing: 'border-box' },
