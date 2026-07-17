@@ -276,6 +276,12 @@
     "quantidade": null
   },
   {
+    "produto_codigo": "4640013",
+    "principal_codigo": "4300055",
+    "tipo": "opcional",
+    "quantidade": null
+  },
+  {
     "produto_codigo": "4300051",
     "principal_codigo": "4300059",
     "tipo": "obrigatorio",
@@ -679,6 +685,12 @@
   },
   {
     "produto_codigo": "4640049",
+    "principal_codigo": "4300439",
+    "tipo": "opcional",
+    "quantidade": null
+  },
+  {
+    "produto_codigo": "4640013",
     "principal_codigo": "4300439",
     "tipo": "opcional",
     "quantidade": null
