@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DJI FlightHub 2 - Treinamento de Interfaces de Integração</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+:root {
+  --bg-primary: #f4f6fa;
+  --bg-card: #ffffff;
+  --bg-card-hover: #eef1f6;
+  --bg-surface: #f8f9fb;
+  --border: #e5e7eb;
+  --border-hover: #3355FF;
+  --text-primary: #111111;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
+  --dji-red: #3355FF;
+  --sync-teal: #0d9488;
+  --api-blue: #3355FF;
+  --event-amber: #f59e0b;
+  --frontend-purple: #7c3aed;
+  --success: #22c55e;
+  --font-display: 'Rajdhani', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 8px 25px rgba(0,0,0,0.10);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* === HEADER === */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 40px;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.header-left { display: flex; align-items: center; gap: 16px; }
+.logo { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--dji-red); letter-spacing: 1px; }
+.logo-sub { font-size: 13px; color: var(--text-secondary); border-left: 1px solid var(--border); padding-left: 16px; }
+.nav-tabs { display: flex; gap: 4px; background: var(--bg-card); border-radius: var(--radius-sm); padding: 4px; }
+.nav-tab {
+  padding: 8px 20px; border-radius: 6px; font-size: 13px; font-weight: 500;
+  color: var(--text-secondary); cursor: pointer; transition: all 0.2s; border: none; background: none;
+}
+.nav-tab.active { background: var(--bg-surface); color: var(--text-primary); }
+.nav-tab:hover:not(.active) { color: var(--text-primary); }
+
+/* === HERO === */
+.hero {
+  padding: 60px 40px 40px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;
+  max-width: 1400px; margin: 0 auto;
+}
+.hero-text h1 {
+  font-family: var(--font-display); font-size: 42px; font-weight: 700;
+  line-height: 1.2; margin-bottom: 16px;
+}
+.hero-text h1 span { color: var(--dji-red); }
+.hero-text p { color: var(--text-secondary); font-size: 16px; max-width: 520px; margin-bottom: 24px; }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(51,85,255,0.1); border: 1px solid rgba(51,85,255,0.3);
+  padding: 6px 14px; border-radius: 20px; font-size: 12px; color: var(--dji-red);
+}
+
+.topology {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 32px; position: relative;
+}
+.topo-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 20px; }
+.topo-flow { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.topo-node {
+  padding: 10px 16px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600;
+  text-align: center; min-width: 80px;
+}
+.topo-node.platform { background: rgba(51,85,255,0.15); border: 1px solid rgba(51,85,255,0.4); color: var(--api-blue); }
+.topo-node.fh2 { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #EF4444; }
+.topo-node.target { background: rgba(13,148,136,0.15); border: 1px solid rgba(13,148,136,0.4); color: var(--sync-teal); }
+.topo-arrow { color: var(--text-muted); font-size: 18px; }
+
+/* === SECTION === */
+.section { max-width: 1400px; margin: 0 auto; padding: 40px; }
+.section-title {
+  font-family: var(--font-display); font-size: 28px; font-weight: 700; margin-bottom: 8px;
+}
+.section-desc { color: var(--text-secondary); font-size: 14px; margin-bottom: 32px; }
+
+/* === INTERFACE CARDS === */
+.interface-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 48px; }
+.iface-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 24px; transition: all 0.3s; position: relative; overflow: hidden;
+}
+.iface-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+}
+.iface-card.sync::before { background: var(--sync-teal); }
+.iface-card.api::before { background: var(--api-blue); }
+.iface-card.event::before { background: var(--event-amber); }
+.iface-card.frontend::before { background: var(--frontend-purple); }
+.iface-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+.iface-icon { font-size: 28px; margin-bottom: 12px; }
+.iface-name { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.iface-analogy { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; font-style: italic; }
+.iface-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+.iface-tag {
+  display: inline-block; margin-top: 12px; padding: 3px 10px; border-radius: 12px;
+  font-size: 11px; font-weight: 600;
+}
+.iface-tag.sync { background: rgba(13,148,136,0.12); color: var(--sync-teal); }
+.iface-tag.api { background: rgba(51,85,255,0.12); color: var(--api-blue); }
+.iface-tag.event { background: rgba(245,158,11,0.12); color: var(--event-amber); }
+.iface-tag.frontend { background: rgba(124,58,237,0.12); color: var(--frontend-purple); }
+
+/* === SCENARIO CARDS === */
+.scenario-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.scenario-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 24px; cursor: pointer; transition: all 0.3s; position: relative;
+}
+.scenario-card:hover { border-color: var(--border-hover); transform: translateY(-3px); box-shadow: var(--shadow); }
+.scenario-card:hover .scenario-arrow { opacity: 1; transform: translateX(4px); }
+.scenario-num { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+.scenario-icon { font-size: 32px; margin-bottom: 12px; }
+.scenario-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.scenario-brief { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+.scenario-meta { display: flex; align-items: center; justify-content: space-between; }
+.scenario-badge {
+  padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
+}
+.scenario-badge.sync { background: rgba(13,148,136,0.12); color: var(--sync-teal); }
+.scenario-badge.api { background: rgba(51,85,255,0.12); color: var(--api-blue); }
+.scenario-badge.event { background: rgba(245,158,11,0.12); color: var(--event-amber); }
+.scenario-badge.frontend { background: rgba(124,58,237,0.12); color: var(--frontend-purple); }
+.scenario-dev { font-size: 11px; color: var(--text-muted); }
+.scenario-arrow { opacity: 0; transition: all 0.3s; color: var(--text-muted); position: absolute; right: 20px; top: 50%; }
+
+/* === MATRIX VIEW === */
+.matrix-view { display: none; }
+.matrix-view.active { display: block; }
+.scenarios-view.active { display: block; }
+.scenarios-view { display: none; }
+.matrix-table {
+  width: 100%; border-collapse: collapse;
+  background: var(--bg-card); border-radius: var(--radius); overflow: hidden;
+  border: 1px solid var(--border);
+}
+.matrix-table th {
+  padding: 14px 16px; font-size: 12px; font-weight: 600; text-align: left;
+  background: var(--bg-surface); border-bottom: 1px solid var(--border);
+  color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;
+}
+.matrix-table td {
+  padding: 12px 16px; font-size: 13px; border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+}
+.matrix-table tr:last-child td { border-bottom: none; }
+.matrix-table tr:hover td { background: var(--bg-card-hover); }
+.check { color: var(--success); }
+.cross { color: var(--text-muted); }
+
+/* === MODAL === */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
+  align-items: center; justify-content: center; padding: 24px;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--bg-primary); border: 1px solid var(--border); border-radius: 16px;
+  width: 100%; max-width: 1100px; max-height: 88vh; overflow-y: auto;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.18);
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 32px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--bg-primary); z-index: 10;
+}
+.modal-title-group { display: flex; align-items: center; gap: 12px; }
+.modal-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
+.modal-badge { padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.modal-close {
+  width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  transition: all 0.2s;
+}
+.modal-close:hover { border-color: var(--border-hover); color: var(--text-primary); }
+.modal-body { padding: 32px; }
+.modal-split { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.panel {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 24px;
+}
+.panel-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+}
+.panel-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+.panel-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6; }
+
+.flow-steps { display: flex; flex-direction: column; gap: 0; }
+.flow-step {
+  display: flex; align-items: flex-start; gap: 12px; padding: 10px 0;
+  position: relative;
+}
+.flow-step::before {
+  content: ''; position: absolute; left: 11px; top: 32px; bottom: -2px;
+  width: 2px; background: var(--border);
+}
+.flow-step:last-child::before { display: none; }
+.flow-dot {
+  width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff;
+}
+.flow-dot.restaurant { background: var(--event-amber); }
+.flow-dot.dji { background: var(--dji-red); }
+.flow-text { font-size: 13px; color: var(--text-secondary); padding-top: 2px; }
+
+.conditions-section { margin-top: 24px; }
+.conditions-title { font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; }
+.condition-item { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; font-size: 12px; color: var(--text-secondary); }
+.condition-check { color: var(--success); flex-shrink: 0; }
+
+.deploy-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.deploy-chip {
+  padding: 4px 10px; border-radius: 12px; font-size: 11px;
+  background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: var(--success);
+}
+.deploy-chip.disabled {
+  background: rgba(90,100,120,0.1); border-color: rgba(90,100,120,0.3); color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.upgrade-section {
+  margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);
+}
+.upgrade-title { font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+.upgrade-text { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+
+.modal-nav {
+  display: flex; justify-content: space-between; padding: 16px 32px;
+  border-top: 1px solid var(--border);
+}
+.modal-nav-btn {
+  padding: 8px 20px; border-radius: var(--radius-sm); font-size: 13px;
+  border: 1px solid var(--border); background: var(--bg-card); color: var(--text-secondary);
+  cursor: pointer; transition: all 0.2s;
+}
+.modal-nav-btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
+.modal-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* === RESPONSIVE === */
+@media (max-width: 1024px) {
+  .hero { grid-template-columns: 1fr; }
+  .interface-grid { grid-template-columns: repeat(2, 1fr); }
+  .scenario-grid { grid-template-columns: repeat(2, 1fr); }
+  .modal-split { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .interface-grid { grid-template-columns: 1fr; }
+  .scenario-grid { grid-template-columns: 1fr; }
+  .header { padding: 12px 20px; flex-wrap: wrap; gap: 12px; }
+  .section { padding: 24px 20px; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo">DJI FlightHub 2</div>
+    <div class="logo-sub">Treinamento de Interfaces de Integração | Programa de Parceiros DAC</div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchView(this, 'scenarios')">Seleção de Cenários</button>
+    <button class="nav-tab" onclick="switchView(this, 'matrix')">Matriz de Interfaces</button>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-text">
+    <div class="hero-badge">Baseado no Capítulo 2: Arquitetura do Sistema DFR</div>
+    <h1>Escolha a Interface Certa<br>para o <span>Seu Cenário</span></h1>
+    <p>A FlightHub 2 expõe quatro interfaces de integração, cada uma pensada para uma necessidade diferente. Pense na FH2 como um restaurante de serviço completo: a pergunta não é o que ela pode servir, mas como você quer pedir.</p>
+  </div>
+  <div class="topology">
+    <div class="topo-title">Topologia de Integração</div>
+    <div class="topo-flow">
+      <div class="topo-node platform">Sua Plataforma<br><small>VMS / CAD / GIS</small></div>
+      <div class="topo-arrow">&larr;&rarr;</div>
+      <div class="topo-node fh2">FlightHub 2<br><small>Camada PaaS</small></div>
+      <div class="topo-arrow">&larr;&rarr;</div>
+      <div class="topo-node target">Frota de Drones<br><small>Dock + Aeronave</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- INTERFACE OVERVIEW -->
+<section class="section">
+  <div class="section-title">Quatro Interfaces, Quatro Modelos de Serviço</div>
+  <div class="section-desc">Cada interface corresponde a um modelo de serviço de restaurante. Entender a analogia ajuda você a escolher a certa instantaneamente.</div>
+  <div class="interface-grid">
+    <div class="iface-card sync">
+      <div class="iface-icon">&#x1F69A;</div>
+      <div class="iface-name">FlightHub Sync</div>
+      <div class="iface-analogy">"Entrega de cardápio fixo &mdash; diga o endereço e entregamos automaticamente"</div>
+      <div class="iface-desc">Ponte de dados configurada pela interface gráfica. Encaminhamento de livestream, envio de telemetria MQTT e sincronização de arquivos S3 &mdash; tudo sem escrever uma única linha de código.</div>
+      <div class="iface-tag sync">Sem Código</div>
+    </div>
+    <div class="iface-card api">
+      <div class="iface-icon">&#x1F468;&#x200D;&#x1F373;</div>
+      <div class="iface-name">Open API</div>
+      <div class="iface-analogy">"Linha da cozinha privada &mdash; chame a cozinha diretamente, controle o que acontece"</div>
+      <div class="iface-desc">Interface HTTP RESTful. Dispare livestreams, envie missões, consulte o estado dos dispositivos, gerencie recursos &mdash; controle programático bidirecional completo.</div>
+      <div class="iface-tag api">Requer Dev</div>
+    </div>
+    <div class="iface-card event">
+      <div class="iface-icon">&#x1F514;</div>
+      <div class="iface-name">Event API</div>
+      <div class="iface-analogy">"Garçom proativo &mdash; no momento em que o prato fica pronto, ele vem te avisar"</div>
+      <div class="iface-desc">Envio via webhook HTTP. A FH2 envia notificações POST ao seu endpoint quando ocorrem eventos &mdash; missão concluída, mídia pronta, anomalia de dispositivo. Sem polling.</div>
+      <div class="iface-tag event">Requer Dev</div>
+    </div>
+    <div class="iface-card frontend">
+      <div class="iface-icon">&#x1F3EA;</div>
+      <div class="iface-name">Componentes Frontend</div>
+      <div class="iface-analogy">"Alugue a cozinha profissional &mdash; seu espaço, seus equipamentos e chefs"</div>
+      <div class="iface-desc">Incorpore os módulos UI testados em produção da FH2 (Virtual Cockpit, Route Editor, Map) diretamente à sua plataforma via paas.js. Somente On-Premises.</div>
+      <div class="iface-tag frontend">Somente On-Prem</div>
+    </div>
+  </div>
+</section>
+
+<!-- SCENARIO VIEW -->
+<section class="section scenarios-view active" id="scenariosView">
+  <div class="section-title">Selecione Seu Cenário</div>
+  <div class="section-desc">Clique em um cartão para ver a analogia do restaurante lado a lado com a abordagem de integração da DJI. Cada recomendação é baseada estritamente nas melhores práticas do Capítulo 2.</div>
+  <div class="scenario-grid">
+    <div class="scenario-card" onclick="openModal(0)">
+      <div class="scenario-num">CENÁRIO 01</div>
+      <div class="scenario-icon">&#x1F4F9;</div>
+      <div class="scenario-title">Transmissão ao Vivo para um VMS Existente</div>
+      <div class="scenario-brief">Envie vídeo ao vivo do drone para um VMS ou parede de exibição CAD já implantado sem programação.</div>
+      <div class="scenario-meta">
+        <span class="scenario-badge sync">FlightHub Sync</span>
+        <span class="scenario-dev">Sem Código</span>
+      </div>
+      <span class="scenario-arrow">&rarr;</span>
+    </div>
+    <div class="scenario-card" onclick="openModal(1)">
+      <div class="scenario-num">CENÁRIO 02</div>
+      <div class="scenario-icon">&#x1F6A8;</div>
+      <div class="scenario-title">Transmissão Ativada por Alarme</div>
+      <div class="scenario-brief">O alarme do CAD dispara, a stream inicia automaticamente e a URL de reprodução fica embutida na interface de despacho.</div>
+      <div class="scenario-meta">
+        <span class="scenario-badge api">Open API</span>
+        <span class="scenario-dev">Requer Dev</span>
+      </div>
+      <span class="scenario-arrow">&rarr;</span>
+    </div>
+    <div class="scenario-card" onclick="openModal(2)">
+      <div class="scenario-num">CENÁRIO 03</div>
+      <div class="scenario-icon">&#x1F4CD;</div>
+      <div class="scenario-title">Posição do Drone em Tempo Real no Mapa</div>
+      <div class="scenario-brief">Coordenadas GPS contínuas enviadas para o mapa CAD/GIS a 0,5 Hz para consciência situacional unificada.</div>
+      <div class="scenario-meta">
+        <span class="scenario-badge sync">FlightHub Sync</span>
+        <span class="scenario-dev">Somente Configuração</span>
+      </div>
+      <span class="scenario-arrow">&rarr;</span>
+    </div>
+    <div class="scenario-card" onclick="openModal(3)">
+      <div class="scenario-num">CENÁRIO 04</div>
+      <div class="scenario-icon">&#x1F4C1;</div>
+      <div class="scenario-title">Arquivamento Automático de Mídias da Missão</div>
+      <div class="scenario-brief">Fotos, vídeos e logs de voo são sincronizados automaticamente para armazenamento de evidências após cada missão.</div>
+      <div class="scenario-meta">
+        <span class="scenario-badge sync">FlightHub Sync</span>
+        <span class="scenario-dev">Somente Configuração</span>
+      </div>
+      <span class="scenario-arrow">&rarr;</span>
+    </div>
+    <div class="scenario-card" onclick="openModal(4)">
+      <div class="scenario-num">CENÁRIO 05</div>
+      <div class="scenario-icon">&#x1F4E8;</div>
+      <div class="scenario-title">Alertas de Backend Orientados a Eventos</div>
+      <div class="scenario-brief">Receba notificações HTTP instantâneas quando missões forem concluídas ou dispositivos reportarem anomalias.</div>
+      <div class="scenario-meta">
+        <span class="scenario-badge event">Event API</span>
+        <span class="scenario-dev">Requer Dev</span>
+      </div>
+      <span class="scenario-arrow">&rarr;</span>
+    </div>
+    <div class="scenario-card" onclick="openModal(5)">
+      <div class="scenario-num">CENÁRIO 06</div>
+      <div class="scenario-icon">&#x1F5A5;&#xFE0F;</div>
+      <div class="scenario-title">Incorporar a Interface de Controle do Drone</div>
+      <div class="scenario-brief">Integre Virtual Cockpit e Route Editor diretamente na interface da sua plataforma.</div>
+      <div class="scenario-meta">
+        <span class="scenario-badge frontend">Componentes Frontend</span>
+        <span class="scenario-dev">Somente On-Prem</span>
+      </div>
+      <span class="scenario-arrow">&rarr;</span>
+    </div>
+  </div>
+</section>
+
+<!-- MATRIX VIEW -->
+<section class="section matrix-view" id="matrixView">
+  <div class="section-title">Matriz de Comparação de Interfaces</div>
+  <div class="section-desc">Comparação lado a lado das quatro interfaces de integração em dimensões-chave. Fonte: Capítulo 2, Seção 2.3.</div>
+  <table class="matrix-table">
+    <thead>
+      <tr>
+        <th>Dimensão</th>
+        <th>FlightHub Sync</th>
+        <th>Open API</th>
+        <th>Event API</th>
+        <th>Componentes Frontend</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Analogia do Restaurante</strong></td>
+        <td>Entrega de cardápio fixo</td>
+        <td>Linha da cozinha privada</td>
+        <td>Garçom proativo</td>
+        <td>Aluguel da cozinha profissional</td>
+      </tr>
+      <tr>
+        <td><strong>Natureza Técnica</strong></td>
+        <td>Ponte de dados configurada pela interface gráfica</td>
+        <td>API HTTP RESTful</td>
+        <td>Envio via Webhook HTTP</td>
+        <td>Incorporação de componentes JS</td>
+      </tr>
+      <tr>
+        <td><strong>Desenvolvimento Necessário</strong></td>
+        <td><span class="check">&#x2713;</span> Sem código</td>
+        <td>Experiência em integração HTTP</td>
+        <td>Endpoint de backend + assinatura</td>
+        <td>Integração frontend</td>
+      </tr>
+      <tr>
+        <td><strong>Direção dos Dados</strong></td>
+        <td>FH2 &rarr; Destino (push)</td>
+        <td>Bidirecional (request-response)</td>
+        <td>FH2 &rarr; Destino (event push)</td>
+        <td>UI da FH2 &rarr; Plataforma hospedeira</td>
+      </tr>
+      <tr>
+        <td><strong>Transmissão ao Vivo</strong></td>
+        <td><span class="check">&#x2713;</span> Encaminhamento RTMP/RTSP</td>
+        <td><span class="check">&#x2713;</span> Iniciar/parar/obter endereço</td>
+        <td><span class="cross">&mdash;</span></td>
+        <td><span class="check">&#x2713;</span> Virtual Cockpit</td>
+      </tr>
+      <tr>
+        <td><strong>Telemetria</strong></td>
+        <td><span class="check">&#x2713;</span> Ponte/encaminhamento MQTT</td>
+        <td><span class="cross">&mdash;</span></td>
+        <td><span class="cross">&mdash;</span></td>
+        <td><span class="cross">&mdash;</span></td>
+      </tr>
+      <tr>
+        <td><strong>Mídia / Arquivos</strong></td>
+        <td><span class="check">&#x2713;</span> Sincronização S3 automática</td>
+        <td><span class="check">&#x2713;</span> Consultar e recuperar</td>
+        <td><span class="check">&#x2713;</span> Notificações de upload/sincronização</td>
+        <td><span class="cross">&mdash;</span></td>
+      </tr>
+      <tr>
+        <td><strong>Despacho de Missão</strong></td>
+        <td><span class="cross">&mdash;</span></td>
+        <td><span class="check">&#x2713;</span> Controle completo</td>
+        <td><span class="cross">&mdash;</span></td>
+        <td><span class="check">&#x2713;</span> Route Editor</td>
+      </tr>
+      <tr>
+        <td><strong>Nuvem Pública</strong></td>
+        <td><span class="check">&#x2713;</span></td>
+        <td><span class="check">&#x2713;</span></td>
+        <td><span class="check">&#x2713;</span></td>
+        <td><span class="cross">&#x2717;</span></td>
+      </tr>
+      <tr>
+        <td><strong>AIO (Appliance)</strong></td>
+        <td><span class="check">&#x2713;</span></td>
+        <td><span class="check">&#x2713;</span></td>
+        <td><span class="check">&#x2713;</span></td>
+        <td><span class="check">&#x2713;</span></td>
+      </tr>
+      <tr>
+        <td><strong>On-Premises</strong></td>
+        <td><span class="check">&#x2713;</span></td>
+        <td><span class="check">&#x2713;</span></td>
+        <td><span class="check">&#x2713;</span></td>
+        <td><span class="check">&#x2713;</span></td>
+      </tr>
+      <tr>
+        <td><strong>Método de Autenticação</strong></td>
+        <td>Configuração no console (sem código de auth)</td>
+        <td>X-User-Token (Cloud) / OAuth 2.0 (On-Prem)</td>
+        <td>Verificação de assinatura HMAC-SHA256</td>
+        <td>paas.js a partir do servidor FH2</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title-group">
+        <span class="modal-title" id="modalTitle"></span>
+        <span class="modal-badge" id="modalBadge"></span>
+      </div>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-split">
+        <!-- Restaurant Panel -->
+        <div class="panel">
+          <div class="panel-label">&#x1F37D;&#xFE0F; Mundo do Restaurante</div>
+          <div class="panel-title" id="restTitle"></div>
+          <div class="panel-desc" id="restDesc"></div>
+          <div class="flow-steps" id="restFlow"></div>
+        </div>
+        <!-- DJI Panel -->
+        <div class="panel">
+          <div class="panel-label">&#x1F681; Mundo da Integração DJI</div>
+          <div class="panel-title" id="djiTitle"></div>
+          <div class="panel-desc" id="djiDesc"></div>
+          <div class="flow-steps" id="djiFlow"></div>
+          <div class="conditions-section" id="conditionsSection"></div>
+          <div class="deploy-chips" id="deployChips"></div>
+          <div class="upgrade-section" id="upgradeSection"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-nav">
+      <button class="modal-nav-btn" id="prevBtn" onclick="navigate(-1)">&larr; Anterior</button>
+      <button class="modal-nav-btn" id="nextBtn" onclick="navigate(1)">Próximo &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SCENARIOS = [
+  {
+    title: "Transmissão ao Vivo para um VMS Existente",
+    badge: "FlightHub Sync",
+    badgeClass: "sync",
+    restaurant: {
+      title: "Entrega de Cardápio Fixo",
+      desc: "Seu restaurante (FH2) possui estações de preparo ativas (drones transmitindo vídeo). Você tem um salão de jantar (VMS) pronto para receber os pratos. Basta informar à cozinha o número da mesa (endereço da stream) e a entrega começa automaticamente.",
+      flow: [
+        "O cliente informa o endereço de entrega (URL RTMP/RTSP)",
+        "A cozinha confirma: qual estação (dispositivo) e qual prato (fonte da câmera)",
+        "Ative: iniciar a entrega com um clique",
+        "Os pratos chegam à mesa continuamente até ser desativado",
+        "Várias mesas podem receber de estações diferentes simultaneamente"
+      ]
+    },
+    dji: {
+      title: "FlightHub Sync: Encaminhamento de Transmissão",
+      desc: "A FlightHub 2 envia vídeo ao vivo do drone para a sua plataforma VMS/CAD via RTMP ou RTSP. Configure no console da FH2, ative e a stream começa a fluir. Sem código necessário.",
+      flow: [
+        "Acesse FlightHub Sync no painel da FH2",
+        "Informe o endereço RTMP/RTSP da plataforma-alvo",
+        "Selecione o dispositivo e a fonte da câmera",
+        "Ative o encaminhamento da stream",
+        "O VMS/CAD recebe vídeo ao vivo em tempo real"
+      ],
+      conditions: [
+        "A plataforma-alvo já está implantada e aceita streams RTMP ou RTSP recebidos",
+        "Não é necessário lógica customizada de controle da stream (iniciar/parar é manual pela FH2)",
+        "Encaminhamento simultâneo para vários drones é suportado em operações coordenadas"
+      ],
+      deploy: ["Nuvem Pública", "AIO", "On-Premises"],
+      deployDisabled: [],
+      upgrade: "Quando a necessidade evoluir para transmissão automatizada acionada por alarme, passe para o controle de livestream via Open API (Cenário 02)."
+    }
+  },
+  {
+    title: "Transmissão Ativada por Alarme",
+    badge: "Open API",
+    badgeClass: "api",
+    restaurant: {
+      title: "Linha da Cozinha Privada",
+      desc: "Em vez de esperar a entrega do cardápio, você tem uma linha direta com o chefe. Quando é preciso um jantar de emergência (alarme disparado), você faz o pedido: qual prato, qual mesa, quando iniciar. O chef executa imediatamente.",
+      flow: [
+        "Recebimento da chamada de emergência (evento de alarme)",
+        "Você chama a cozinha diretamente (chamada HTTP API)",
+        "O chef confirma: o preparo começou, aqui está o número do prato (URL da stream)",
+        "O prato é entregue ao cliente específico (reprodução na interface de despacho)",
+        "Você chama novamente para parar quando o evento é resolvido"
+      ]
+    },
+    dji: {
+      title: "Open API: /live-stream/start",
+      desc: "Seu sistema CAD chama a Open API da FH2 quando um alarme dispara. A FH2 inicia a stream e retorna a URL de reprodução (RTMP ou WebRTC-WHEP), que é embutida diretamente na interface de despacho. A stream para quando o alarme é resolvido.",
+      flow: [
+        "O alarme dispara no sistema CAD",
+        "O CAD executa POST /openapi/v2.0/live-stream/start",
+        "A FH2 retorna a URL de reprodução (RTMP ou WebRTC-WHEP)",
+        "A URL é embutida na interface de eventos do dispatcher",
+        "Alarme resolvido: chame /live-stream/stop para liberar"
+      ],
+      conditions: [
+        "O fluxo de integração está claramente definido (quando, o quê, para quem)",
+        "Recurso de desenvolvimento HTTP RESTful disponível",
+        "Vídeo é o ponto inicial para integração operacional mais profunda",
+        "Assine as atualizações de endereço RTSP da Event API para evitar URLs desatualizadas"
+      ],
+      deploy: ["Nuvem Pública", "AIO", "On-Premises"],
+      deployDisabled: [],
+      upgrade: "Amplie para controle de gimbal, despacho de missão e envio de coordenadas. Combine com Event API para um fluxo DFR fechado completo."
+    }
+  },
+  {
+    title: "Posição do Drone em Tempo Real no Mapa",
+    badge: "FlightHub Sync",
+    badgeClass: "sync",
+    restaurant: {
+      title: "Rastreamento de Entrega em Tempo Real",
+      desc: "Como um aplicativo de delivery mostrando a posição do entregador em tempo real: a cada 2 segundos, o centro de despacho transmite as posições de todos os entregadores. A tela do mapa assina uma vez e recebe atualizações contínuas sem perguntar.",
+      flow: [
+        "A plataforma de entrega transmite continuamente as posições dos entregadores",
+        "O MQTT Broker roteia mensagens por tópico (ID do entregador)",
+        "A tela de despacho assina os tópicos relevantes",
+        "O mapa atualiza a 0,5 Hz com coordenadas ao vivo",
+        "Não é necessário polling. Cancele a assinatura para parar"
+      ]
+    },
+    dji: {
+      title: "FlightHub Sync: Ponte de Telemetria MQTT",
+      desc: "A FH2 atua como cliente MQTT e empurra a telemetria do dispositivo para um broker de terceiros. Assine thing/product/{sn}/osd para posição, altitude, velocidade e heading a 0,5 Hz. Use curingas para cobertura da frota inteira.",
+      flow: [
+        "Configure a Ponte MQTT: informe endereço do broker, porta e credenciais",
+        "Defina o mapeamento de tópicos (suporta curingas + e #)",
+        "Ative a ponte: a FH2 conecta como cliente MQTT",
+        "CAD/GIS assina thing/product/{sn}/osd",
+        "Posição contínua, bateria, estado de voo a 0,5 Hz"
+      ],
+      conditions: [
+        "A plataforma-alvo suporta MQTT ou possui capacidade de ponte via middleware",
+        "A posição do drone precisa aparecer junto com as unidades terrestres no mapa de comando",
+        "Bateria da frota e estado de missão são necessários para decisões de despacho",
+        "Se o alvo não suporta MQTT: implante middleware leve para conversão"
+      ],
+      deploy: ["Nuvem Pública (Encaminhamento de Telemetria)", "AIO", "On-Premises (Ponte MQTT)"],
+      deployDisabled: [],
+      upgrade: "Combine com Event API para alertas de saúde do dispositivo. Adicione Open API para despacho ativo de missões baseado em insights de telemetria."
+    }
+  },
+  {
+    title: "Arquivamento Automático de Mídias da Missão",
+    badge: "FlightHub Sync",
+    badgeClass: "sync",
+    restaurant: {
+      title: "Encaminhamento Automático de Contas",
+      desc: "Após um banquete corporativo, o restaurante envia automaticamente o recibo completo (fotos, vídeos, logs) para o sistema financeiro da empresa. Você configurou o endereço de cobrança uma vez; cada refeição subsequente é arquivada sem perguntar.",
+      flow: [
+        "O banquete termina (missão conclui)",
+        "A cozinha empacota os registros completos: recibos, fotos, logs",
+        "Envia automaticamente para o endereço financeiro pré-configurado (endpoint S3)",
+        "O sistema financeiro recebe tudo em minutos",
+        "Não é necessário recolher manualmente em eventos subsequentes"
+      ]
+    },
+    dji: {
+      title: "FlightHub Sync: Sincronização de Arquivos S3",
+      desc: "Configure um endpoint de armazenamento compatível com S3 uma vez. Após cada missão, fotos, vídeos, logs de voo, modelos 3D e anotações de mapa sincronizam automaticamente. Suporta AWS S3, Alibaba Cloud OSS e MinIO self-hosted.",
+      flow: [
+        "Adicione a configuração de armazenamento: nome do bucket, AK/SK, região",
+        "Execute a verificação de conectividade (deve mostrar Connected)",
+        "Execute uma missão de teste para validar a entrega de arquivos",
+        "Todas as missões subsequentes sincronizam automaticamente no endpoint configurado",
+        "Assine Event API file_sync_success para confirmação"
+      ],
+      conditions: [
+        "O armazenamento-alvo é compatível com S3 (AWS S3, Alibaba OSS ou MinIO)",
+        "Os arquivos são arquivados sem transformação necessária",
+        "Até 20 configurações de armazenamento por organização",
+        "Sistemas legados sem S3: use mount s3fs ou middleware de transferência"
+      ],
+      deploy: ["Nuvem Pública", "AIO", "On-Premises"],
+      deployDisabled: [],
+      upgrade: "Adicione assinatura na Event API para file_sync_success disparar processamento downstream. Use Open API para recuperação sob demanda de mídia por mission ID."
+    }
+  },
+  {
+    title: "Alertas de Backend Orientados a Eventos",
+    badge: "Event API",
+    badgeClass: "event",
+    restaurant: {
+      title: "Notificações de Garçom Proativo",
+      desc: "Em vez de ir até o balcão a cada 5 minutos para perguntar se o alimento está pronto, o garçom vem à sua mesa no momento em que fica pronto. Você cadastrou a mesa uma vez; as notificações chegam automaticamente para cada prato.",
+      flow: [
+        "Cadastre o número da mesa com o garçom (configure a URL do Webhook)",
+        "Especifique quais pratos notificar (selecione os tipos de evento)",
+        "O garçom traz a notificação no instante em que o prato fica pronto",
+        "Você verifica se o garçom é do seu restaurante (verificação de assinatura)",
+        "Reaja a cada notificação sem sair do lugar"
+      ]
+    },
+    dji: {
+      title: "Event API: Envios via Webhook HTTP",
+      desc: "A FH2 envia HTTP POST para o endpoint configurado quando eventos inscritos ocorrem. Suporta 9 tipos de evento: media_file_uploaded, file_sync_success, device_exit_return_home, atualização de endereço RTSP e mais. Verificação de assinatura HMAC-SHA256.",
+      flow: [
+        "Crie a regra de notificação no console da FH2",
+        "Defina a URL do Webhook e selecione os tipos de evento para assinar",
+        "Defina o escopo: todos os projetos ou um projeto específico",
+        "A FH2 envia POST com cabeçalho x-dji-signature em cada evento",
+        "Seu backend verifica a assinatura e dispara a lógica de negócio"
+      ],
+      conditions: [
+        "O sistema-alvo aceita requisições HTTP POST inbound",
+        "Recurso de desenvolvimento de backend disponível para endpoint + verificação de assinatura",
+        "Reação imediata aos eventos é necessária (não checagem periódica em lote)",
+        "Cada projeto pode ser referenciado por uma única regra customizada"
+      ],
+      deploy: ["Nuvem Pública", "AIO", "On-Premises"],
+      deployDisabled: [],
+      upgrade: "Combine com Open API para um fluxo completo orientado a eventos: Event API dispara a ação e Open API executa. Logs de entrega retidos por 7 dias, exportáveis em CSV."
+    }
+  },
+  {
+    title: "Incorporar a Interface de Controle do Drone",
+    badge: "Componentes Frontend",
+    badgeClass: "frontend",
+    restaurant: {
+      title: "Alugar a Cozinha Profissional",
+      desc: "Você possui um estabelecimento e quer um serviço de alta qualidade. Em vez de montar uma cozinha do zero, você contrata uma equipe profissional com seu próprio equipamento. Os hóspedes veem sua marca, mas comem um serviço de classe mundial. Quando a equipe de chefs se atualiza, o menu melhora automaticamente.",
+      flow: [
+        "Seu espaço está pronto (plataforma hospedeira implantada)",
+        "A equipe profissional entra com o equipamento (carrega paas.js)",
+        "Eles operam em uma área designada (renderizam no container-alvo)",
+        "Os hóspedes experienciam sua marca + qualidade profissional",
+        "Quando a equipe se atualiza, o serviço melhora também"
+      ]
+    },
+    dji: {
+      title: "Componentes Independentes Frontend: paas.js",
+      desc: "Carregue paas.js a partir do servidor on-premises da FH2. Incorpore Virtual Cockpit, Route Editor, Map e Flight Records diretamente à sua plataforma. Sua marca, a lógica operacional testada em produção da DJI. Herda automaticamente as atualizações da versão da FH2.",
+      flow: [
+        "Implante FH2 On-Premises ou AIO localmente",
+        "Carregue paas.js a partir do IP/domínio do servidor FH2 (sem download)",
+        "Renderize os componentes em containers designados",
+        "Os usuários veem a marca da plataforma hospedeira com as capacidades da FH2",
+        "As atualizações da FH2 fluem automaticamente para os componentes embutidos"
+      ],
+      conditions: [
+        "O projeto está em estágio de implantação AIO ou On-Premises",
+        "É necessário uma UI de controle de drone em nível de produção sem construir do zero",
+        "Quer herdar iterações da versão da FH2 sem manutenção independente",
+        "A Nuvem Pública não suporta Componentes Frontend"
+      ],
+      deploy: ["AIO", "On-Premises"],
+      deployDisabled: ["Nuvem Pública"],
+      upgrade: "Caminho de validação: Nuvem Pública (confirmar viabilidade) -> AIO (validar Componentes Frontend) -> On-Premises (entrega em produção)."
+    }
+  }
+];
+
+let currentScenario = 0;
+
+function switchView(btn, view) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('scenariosView').classList.toggle('active', view === 'scenarios');
+  document.getElementById('matrixView').classList.toggle('active', view === 'matrix');
+}
+
+function openModal(index) {
+  currentScenario = index;
+  renderModal(index);
+  document.getElementById('modalOverlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(e) {
+  if (e && e.target !== e.currentTarget && !e.target.classList.contains('modal-close')) return;
+  document.getElementById('modalOverlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function navigate(dir) {
+  currentScenario += dir;
+  if (currentScenario < 0) currentScenario = SCENARIOS.length - 1;
+  if (currentScenario >= SCENARIOS.length) currentScenario = 0;
+  renderModal(currentScenario);
+}
+
+function renderModal(index) {
+  const s = SCENARIOS[index];
+  document.getElementById('modalTitle').textContent = s.title;
+  const badge = document.getElementById('modalBadge');
+  badge.textContent = s.badge;
+  badge.className = 'modal-badge scenario-badge ' + s.badgeClass;
+
+  // Restaurant panel
+  document.getElementById('restTitle').textContent = s.restaurant.title;
+  document.getElementById('restDesc').textContent = s.restaurant.desc;
+  const restFlow = document.getElementById('restFlow');
+  restFlow.innerHTML = s.restaurant.flow.map((step, i) =>
+    '<div class="flow-step"><div class="flow-dot restaurant">' + (i+1) + '</div><div class="flow-text">' + step + '</div></div>'
+  ).join('');
+
+  // DJI panel
+  document.getElementById('djiTitle').textContent = s.dji.title;
+  document.getElementById('djiDesc').textContent = s.dji.desc;
+  const djiFlow = document.getElementById('djiFlow');
+  djiFlow.innerHTML = s.dji.flow.map((step, i) =>
+    '<div class="flow-step"><div class="flow-dot dji">' + (i+1) + '</div><div class="flow-text">' + step + '</div></div>'
+  ).join('');
+
+  // Conditions
+  const condSection = document.getElementById('conditionsSection');
+  condSection.innerHTML = '<div class="conditions-title">Condições Ideais</div>' +
+    s.dji.conditions.map(c =>
+      '<div class="condition-item"><span class="condition-check">&#x2713;</span>' + c + '</div>'
+    ).join('');
+
+  // Deploy chips
+  const chips = document.getElementById('deployChips');
+  const allDeploy = ['Nuvem Pública', 'AIO', 'On-Premises'];
+  chips.innerHTML = s.dji.deploy.map(d =>
+    '<span class="deploy-chip">' + d + '</span>'
+  ).join('') + s.dji.deployDisabled.map(d =>
+    '<span class="deploy-chip disabled">' + d + '</span>'
+  ).join('');
+
+  // Upgrade
+  const upg = document.getElementById('upgradeSection');
+  upg.innerHTML = '<div class="upgrade-title">Caminho de Evolução</div><div class="upgrade-text">' + s.dji.upgrade + '</div>';
+
+  // Nav buttons
+  document.getElementById('prevBtn').disabled = false;
+  document.getElementById('nextBtn').disabled = false;
+}
+
+// Keyboard
+document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('modalOverlay').classList.contains('active')) return;
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'ArrowLeft') navigate(-1);
+  if (e.key === 'ArrowRight') navigate(1);
+});
+</script>
+
+</body>
+</html>

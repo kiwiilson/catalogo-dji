@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DJI FlightHub 2 — Treinamento de protocolos de integração</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#f4f6fa;color:#1a1d23;min-height:100vh;user-select:none;overflow-x:hidden}
+
+/* HEADER */
+.hdr{background:#fff;border-bottom:1px solid #e2e6ed;padding:12px 22px;
+     display:flex;align-items:center;justify-content:space-between;gap:12px;
+     position:sticky;top:0;z-index:80;box-shadow:0 1px 0 rgba(15,23,42,.03)}
+.logo-mark{font-weight:800;font-size:15px;color:#cc0000}
+.logo-sub{font-size:12px;color:#8892a8;border-left:1px solid #e2e6ed;padding-left:12px;margin-left:12px}
+.hdr-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.pip-row{display:flex;gap:5px}
+.pip{width:10px;height:10px;border-radius:50%;background:#dde2ea;transition:all .4s}
+.pip.done{background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,.5)}
+.prog-lbl{font-size:12px;color:#6b7280;font-weight:500;min-width:90px}
+.btn-reset{padding:6px 16px;border-radius:7px;border:1.5px solid #dde2ea;
+           background:#fff;color:#5a6578;font-size:12px;cursor:pointer;
+           font-family:inherit;transition:all .2s;font-weight:500}
+.btn-reset:hover{border-color:#cc0000;color:#cc0000}
+
+/* LAYOUT: main + right sidebar */
+.layout{display:flex;align-items:flex-start;gap:20px;max-width:1480px;margin:0 auto;padding:0 20px 24px}
+.main-col{flex:1;min-width:0;padding:20px 0 20px;overflow-x:auto}
+.sidebar{width:280px;flex-shrink:0;position:sticky;top:74px;max-height:calc(100vh - 74px);
+         overflow-y:auto;background:#fff;border:1px solid #e2e6ed;border-radius:12px;
+         padding:16px 14px;display:flex;flex-direction:column;gap:0;box-shadow:0 8px 24px rgba(15,23,42,.04)}
+.sidebar-title{font-size:11px;font-weight:700;text-transform:uppercase;
+               letter-spacing:.9px;color:#9ca3af;margin-bottom:4px;padding:0 2px}
+.sidebar-count{font-size:11px;color:#9ca3af;padding:0 2px;margin-bottom:12px}
+.cards-list{display:flex;flex-direction:column;gap:8px}
+
+/* SECTION SHELL */
+.section-shell{background:#fff;border-radius:14px;border:1px solid #e2e6ed;
+               margin-bottom:18px;overflow:hidden;min-width:0;box-shadow:0 8px 24px rgba(15,23,42,.04)}
+.section-title{font-size:12px;color:#6b7280;font-weight:600;padding:14px 22px 0;
+               letter-spacing:.3px;text-transform:uppercase}
+
+/* FLOW ROW */
+.flow-row{display:flex;align-items:center;padding:14px 18px;gap:8px;flex-wrap:wrap;justify-content:flex-start}
+.flow-row+.flow-row{border-top:1px dashed #eef0f4;padding-top:12px}
+.row-label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+           color:#b8c0cc;writing-mode:vertical-lr;margin-right:6px;flex-shrink:0;
+           min-width:14px}
+
+/* NODE */
+.fnode{display:flex;flex-direction:column;align-items:center;justify-content:center;
+       min-width:102px;max-width:120px;padding:11px 7px 8px;border:1.5px solid #e2e6ed;
+       border-radius:11px;background:#fafbfc;gap:4px;
+       transition:border-color .25s, background .25s, box-shadow .25s;
+       position:relative;flex-shrink:0}
+/* Drop zones: NO visual change until after drop */
+.fnode.droppable{cursor:default}
+/* ONLY after correct drop */
+.fnode.placed{border-color:#22c55e!important;background:#f0fdf4!important}
+/* ONLY after wrong drop */
+.fnode.wrong-flash{animation:wrongFlash .45s ease}
+.fnode-icon{font-size:24px;line-height:1}
+.fnode-name{font-size:10.5px;font-weight:700;text-align:center;color:#1a1d23;line-height:1.3}
+.fnode-sub{font-size:9px;color:#9ca3af;text-align:center;font-family:'JetBrains Mono',monospace;line-height:1.3}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;
+       font-size:9.5px;font-weight:700;letter-spacing:.2px;margin-top:2px}
+.b-blue{background:#1a73e8;color:#fff}
+.b-green{background:#22c55e;color:#fff}
+.b-orange{background:#f59e0b;color:#fff}
+.b-teal{background:#0d9488;color:#fff}
+.b-ob{background:transparent;border:1.5px solid #1a73e8;color:#1a73e8}
+.b-og{background:transparent;border:1.5px solid #22c55e;color:#22c55e}
+
+/* node chips */
+.node-chips{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:3px;min-height:14px}
+.node-chip{font-size:11px;padding:0 3px;background:#e8f0fe;border-radius:4px;line-height:1.4}
+
+/* ARROW */
+.farrow{flex:1;min-width:28px;max-width:60px;display:flex;align-items:center;
+        justify-content:center;position:relative;height:36px;flex-shrink:1}
+.farrow svg{width:100%;height:18px;overflow:visible}
+.al{stroke:#d1d5db;stroke-width:1.8;fill:none;transition:stroke .4s}
+.ah{fill:#d1d5db;transition:fill .4s}
+.farrow.dotted .al{stroke-dasharray:4 3}
+/* active states */
+.farrow.act-blue .al{stroke:#1a73e8}.farrow.act-blue .ah{fill:#1a73e8}
+.farrow.act-orange .al{stroke:#f59e0b}.farrow.act-orange .ah{fill:#f59e0b}
+.farrow.act-green .al{stroke:#22c55e}.farrow.act-green .ah{fill:#22c55e}
+.farrow.act-teal .al{stroke:#0d9488}.farrow.act-teal .ah{fill:#0d9488}
+
+@keyframes flowDot{0%{left:4px}100%{left:calc(100% - 8px)}}
+.farrow.act-blue::after,.farrow.act-orange::after,.farrow.act-teal::after{
+  content:'';position:absolute;width:5px;height:5px;border-radius:50%;
+  top:50%;transform:translateY(-50%);animation:flowDot .9s linear infinite}
+.farrow.act-blue::after{background:#1a73e8}
+.farrow.act-orange::after{background:#f59e0b}
+.farrow.act-teal::after{background:#0d9488}
+
+/* VERTICAL CONNECTORS */
+.vconn-bar{display:flex;padding:0 20px;height:20px;
+           justify-content:space-around;align-items:center}
+.vc{width:1.5px;height:20px;background:#e9ecef;transition:background .4s}
+.vc.act-blue{background:#1a73e8}.vc.act-orange{background:#f59e0b}.vc.act-teal{background:#0d9488}
+
+/* MQTT section */
+.mqtt-wrap{padding:16px 22px 20px}
+.mqtt-grid{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:0}
+.mqtt-box{display:flex;flex-direction:column;align-items:center;gap:5px;
+          border-radius:12px;padding:16px 20px;min-width:160px;transition:border-color .3s, background .3s}
+.mqtt-rest{background:#faf5ff;border:2px solid #7c3aed}
+.mqtt-fh2{background:#f0fdfa;border:1.5px solid #0d9488;cursor:default;position:relative}
+.mqtt-fh2.placed{background:#f0fdf4;border-color:#22c55e}
+.mqtt-fh2.wrong-flash{animation:wrongFlash .45s ease}
+.mqtt-sub{background:#faf5ff;border:2px solid #7c3aed}
+.mqtt-topics{display:flex;flex-direction:column;gap:8px;padding:0 28px;flex:1}
+.topic-row{display:flex;align-items:center;gap:10px}
+.topic-arr{flex:1;height:2px;transition:all .4s;
+           background:repeating-linear-gradient(90deg,#c4b5fd 0,#c4b5fd 5px,transparent 5px,transparent 10px)}
+.topic-arr.act{background:repeating-linear-gradient(90deg,#7c3aed 0,#7c3aed 5px,transparent 5px,transparent 10px);
+               animation:topicFlow .55s linear infinite}
+@keyframes topicFlow{to{background-position:20px}}
+.topic-pill{border-radius:20px;padding:4px 14px;font-size:11px;font-weight:600;
+            white-space:nowrap;transition:all .35s}
+.rest-pill{background:#f3e8ff;border:1.5px solid #7c3aed;color:#7c3aed}
+.rest-pill.act{background:#7c3aed;color:#fff}
+.fh2-pill{background:#f0fdfa;border:1.5px solid #0d9488;color:#0d9488;
+          font-family:'JetBrains Mono',monospace;font-size:10px}
+.fh2-pill.act{background:#0d9488;color:#fff}
+.mqtt-divider{height:1px;background:#eef0f4;margin:2px 22px 0}
+
+/* COMPARISON TABLE */
+.cmp-wrap{background:#fff;border-radius:12px;border:1px solid #e2e6ed;
+          overflow:hidden;margin-bottom:18px}
+.cmp-table{width:100%;border-collapse:collapse;min-width:820px}
+.cmp-table th{padding:11px 18px;text-align:left;font-size:11.5px;font-weight:600;
+              color:#6b7280;background:#f8f9fb;border-bottom:1px solid #e2e6ed;
+              text-transform:uppercase;letter-spacing:.3px}
+.cmp-table td{padding:10px 18px;font-size:12.5px;border-bottom:1px solid #f0f2f5}
+.cmp-table tr:last-child td{border-bottom:none}
+.cmp-table tr{transition:background .3s}
+.cmp-table tr.hi-blue td{background:#eff6ff}
+.cmp-table tr.hi-amber td{background:#fffbeb}
+.cmp-table tr.hi-teal td{background:#f0fdfa}
+.tl-blue{color:#1a73e8;font-weight:700}
+.tl-green{color:#22c55e;font-weight:700}
+.tl-orange{color:#f59e0b;font-weight:700}
+.tl-teal{color:#0d9488;font-weight:700}
+
+/* CARDS (sidebar) */
+.card{background:#fafbfc;border:1.5px solid #dde2ea;border-radius:9px;
+      padding:10px 12px;cursor:grab;transition:all .2s;display:flex;
+      align-items:center;gap:10px;position:relative}
+.card:hover{border-color:#a0aec0;box-shadow:0 3px 12px rgba(0,0,0,.08);background:#fff;transform:translateX(-2px)}
+.card.dragging{opacity:.25;cursor:grabbing}
+.card.placed{opacity:.35;cursor:default;pointer-events:none;border-style:dashed;border-color:#22c55e}
+.card.placed::after{content:'✓';position:absolute;right:10px;top:50%;transform:translateY(-50%);
+                    color:#22c55e;font-size:13px;font-weight:700}
+.card-icon-s{font-size:20px;flex-shrink:0}
+.card-text{flex:1;min-width:0}
+.card-title-s{font-size:11.5px;font-weight:600;color:#1a1d23;line-height:1.3}
+.card-sub-s{font-size:9.5px;color:#9ca3af;font-family:'JetBrains Mono',monospace;
+            margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:270px;
+       transform:translateX(0) translateY(70px);opacity:0;
+       background:#1e2433;border-radius:11px;padding:13px 18px;
+       max-width:480px;font-size:12.5px;line-height:1.6;
+       box-shadow:0 6px 32px rgba(0,0,0,.3);z-index:200;color:#e8ecf4;
+       transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .35s;
+       border-left:4px solid #22c55e}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.err{border-left-color:#ef4444}
+.toast b{color:#fff;display:block;margin-bottom:3px}
+.toast .tp{font-size:10px;color:#6b7280;margin-top:5px;font-family:'JetBrains Mono',monospace}
+
+/* COMPLETION */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+         z-index:300;align-items:center;justify-content:center;
+         padding:24px;backdrop-filter:blur(5px)}
+.overlay.show{display:flex}
+.result-modal{background:#fff;border-radius:16px;width:100%;max-width:880px;
+              max-height:90vh;overflow-y:auto;
+              box-shadow:0 20px 70px rgba(0,0,0,.4)}
+.res-header{padding:26px 30px 0;text-align:center}
+.res-header h2{font-size:20px;font-weight:700;margin-bottom:4px}
+.res-header p{font-size:12.5px;color:#6b7280}
+.res-body{padding:20px 30px}
+.res-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.res-node{border-radius:10px;padding:18px;border:1px solid #e2e6ed}
+.res-name{font-size:13px;font-weight:700;margin-bottom:4px}
+.res-analogy{font-size:11.5px;color:#6b7280;font-style:italic;background:#f8f9fb;
+             border-radius:7px;padding:7px 9px;margin-bottom:10px;line-height:1.6}
+.res-chip{display:flex;align-items:center;gap:7px;font-size:11.5px;
+          background:#f8f9fb;padding:5px 9px;border-radius:7px;margin-bottom:5px}
+.res-tech{font-size:10px;line-height:1.8;background:#f1f5f9;
+          border-radius:7px;padding:9px 10px;font-family:'JetBrains Mono',monospace;
+          color:#374151;margin-top:8px}
+.res-tech b{color:#1a1d23}
+.res-footer{padding:18px 30px 26px;display:flex;justify-content:center;gap:12px}
+.btn-p{padding:10px 26px;background:#cc0000;border:none;border-radius:8px;
+       color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-p:hover{background:#e00;transform:translateY(-1px)}
+.btn-s{padding:10px 26px;background:#fff;border:1.5px solid #dde2ea;border-radius:8px;
+       color:#6b7280;font-size:13px;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-s:hover{border-color:#374151;color:#374151}
+
+/* Ghost */
+#dg{position:fixed;pointer-events:none;z-index:9999;
+    background:#fff;border:1.5px solid #1a73e8;border-radius:8px;
+    padding:6px 12px;font-size:11px;font-weight:600;display:none;
+    box-shadow:0 4px 16px rgba(0,0,0,.18);color:#1a1d23;max-width:180px}
+
+@keyframes wrongFlash{
+  0%,100%{border-color:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,.2)}
+  50%{border-color:#fca5a5;box-shadow:0 0 0 4px rgba(239,68,68,.15)}}
+@keyframes popIn{0%{transform:scale(.86);opacity:0}70%{transform:scale(1.02)}100%{transform:scale(1);opacity:1}}
+@media (max-width:1180px){
+  .layout{flex-direction:column}
+  .sidebar{width:100%;position:relative;top:0;max-height:none;border-left:1px solid #e2e6ed;border-top:none;border-radius:0 0 12px 12px}
+  .main-col{padding-top:16px}
+}
+@media (max-width:760px){
+  .hdr{padding:12px 14px}
+  .hdr-right{width:100%;justify-content:space-between}
+  .flow-row{padding:12px 12px 14px;gap:8px;justify-content:center}
+  .fnode{min-width:96px;max-width:100%}
+  .mqtt-grid{grid-template-columns:1fr;gap:12px}
+  .mqtt-topics{padding:0}
+  .cmp-table{min-width:0}
+  .res-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div id="dg"></div>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px">
+    <span class="logo-mark">DJI FlightHub 2</span>
+    <span class="logo-sub">Treinamento de protocolos de integração</span>
+  </div>
+  <div class="hdr-right">
+    <div class="pip-row"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+    <span class="prog-lbl" id="prog-lbl">0 / 11 correspondidos</span>
+    <button class="btn-reset" id="btn-reset">Redefinir</button>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+<!-- ═══ MAIN COLUMN ═══ -->
+<div class="main-col">
+
+<!-- HTTP SECTION -->
+<div class="section-shell">
+  <div class="section-title">Solicitação-resposta síncrona e envio por webhook</div>
+
+  <!-- Restaurant row -->
+  <div class="flow-row">
+    <div class="row-label">Restaurante</div>
+    <div class="fnode " ><div class="fnode-name">Cliente</div><span class="badge b-green">API</span><div class="fnode-sub">Cardápio</div><div class="fnode-sub">Usuário API</div></div>
+    <div class="farrow" id=""><svg viewBox="0 0 60 18" preserveAspectRatio="none"><line class="al" x1="2" y1="9" x2="50" y2="9"/><polygon class="ah" points="47,5 58,9 47,13"/></svg></div>
+    <div class="fnode " ><div class="fnode-name">Requisição HTTP</div><span class="badge b-blue">HTTP</span><div class="fnode-sub">Entrega</div></div>
+    <div class="farrow" id=""><svg viewBox="0 0 60 18" preserveAspectRatio="none"><line class="al" x1="2" y1="9" x2="50" y2="9"/><polygon class="ah" points="47,5 58,9 47,13"/></svg></div>
+    <div class="fnode " ><div class="fnode-name">Cozinha</div><div class="fnode-sub">Processamento</div></div>
+    <div class="farrow dotted" id=""><svg viewBox="0 0 60 18" preserveAspectRatio="none"><line class="al" x1="2" y1="9" x2="50" y2="9"/><polygon class="ah" points="47,5 58,9 47,13"/></svg></div>
+    <div class="fnode " ><div class="fnode-name">Resposta HTTP</div><span class="badge b-blue">HTTP</span><div class="fnode-sub">Retorna resultado</div></div>
+    <div class="farrow" id=""><svg viewBox="0 0 60 18" preserveAspectRatio="none"><line class="al" x1="2" y1="9" x2="50" y2="9"/><polygon class="ah" points="47,5 58,9 47,13"/></svg></div>
+    <div class="fnode " ><div class="fnode-name">Webhook</div><span class="badge b-orange">Webhook</span><div class="fnode-sub">Notificação proativa</div></div>
+    <div class="farrow" id=""><svg viewBox="0 0 60 18" preserveAspectRatio="none"><line class="al" x1="2" y1="9" x2="50" y2="9"/><polygon class="ah" points="47,5 58,9 47,13"/></svg></div>
+    <div class="fnode " ><div class="fnode-name">Recebimento</div><span style="color:#22c55e;font-size:10px;font-weight:700">✓ Concluído</span><div class="fnode-sub">Completo</div></div>
+  </div>
+
+  <div class="vconn-bar"><div class="vc" id="vc1"></div><div class="vc" id="vc2"></div><div class="vc" id="vc3"></div><div class="vc" id="vc4"></div><div class="vc" id="vc5"></div><div class="vc" id="vc6"></div></div>
+
+  <!-- FH2 row -->
+  <div class="flow-row">
+    <div class="row-label">FlightHub 2</div>
+    <div class="fnode droppable" data-node="platform"><div class="fnode-name">Plataforma de Terceiros</div><span class="badge b-ob">Integrador</span><div class="fnode-sub">VMS · CAD · GIS</div></div>
+    <div class="farrow" id="arr-req"><svg viewBox="0 0 60 18" preserveAspectRatio="none"><line class="al" x1="2" y1="9" x2="50" y2="9"/><polygon class="ah" points="47,5 58,9 47,13"/></svg></div>
+    <div class="fnode droppable" data-node="openapi"><div class="fnode-name">API Aberta</div><span class="badge b-blue">HTTP</span><div class="fnode-sub">/openapi/v2.0/</div><div class="node-chips" id="chips-openapi"></div></div>
+    <div class="farrow" id="arr-core"><svg viewBox="0 0 60 18" preserveAspectRatio="none"><line class="al" x1="2" y1="9" x2="50" y2="9"/><polygon class="ah" points="47,5 58,9 47,13"/></svg></div>
+    <div class="fnode droppable" data-node="fh2core"><div class="fnode-name">Núcleo FH2</div><span class="badge b-ob">Núcleo</span><div class="fnode-sub">FlightHub 2</div></div>
+    <div class="farrow dotted" id="arr-resp"><svg viewBox="0 0 60 18" preserveAspectRatio="none"><line class="al" x1="2" y1="9" x2="50" y2="9"/><polygon class="ah" points="47,5 58,9 47,13"/></svg></div>
+    <div class="fnode droppable" data-node="apiresponse"><div class="fnode-name">Resposta da API</div><span class="badge b-blue">HTTP</span><div class="fnode-sub">Retorna endereço/status</div></div>
+    <div class="farrow" id="arr-evt"><svg viewBox="0 0 60 18" preserveAspectRatio="none"><line class="al" x1="2" y1="9" x2="50" y2="9"/><polygon class="ah" points="47,5 58,9 47,13"/></svg></div>
+    <div class="fnode droppable" data-node="eventapi"><div class="fnode-name">API de Eventos</div><span class="badge b-orange">Webhook</span><div class="fnode-sub">Envio por webhook HTTP</div><div class="node-chips" id="chips-eventapi"></div></div>
+    <div class="farrow" id="arr-rcv"><svg viewBox="0 0 60 18" preserveAspectRatio="none"><line class="al" x1="2" y1="9" x2="50" y2="9"/><polygon class="ah" points="47,5 58,9 47,13"/></svg></div>
+    <div class="fnode droppable" data-node="notified"><div class="fnode-name">Plataforma Notificada</div><span style="color:#22c55e;font-size:10px;font-weight:700">✓ Concluído</span><div class="fnode-sub">Backend recebe</div></div>
+  </div>
+</div>
+
+<!-- MQTT SECTION -->
+<div class="section-shell">
+  <div class="section-title">Transmissão assíncrona por pub/sub</div>
+  <div class="mqtt-wrap">
+
+    <!-- Restaurant MQTT -->
+    <div class="mqtt-grid">
+      <div class="mqtt-box mqtt-rest">
+        <div style="font-size:28px">📢</div>
+        <div style="font-size:12px;font-weight:700;text-align:center">Transmissão do Restaurante</div>
+        <span class="badge" style="background:#7c3aed;color:#fff;font-size:9.5px">Broker MQTT</span>
+        <div style="font-size:9.5px;color:#8892a8;text-align:center">Sistema de transmissão do restaurante</div>
+      </div>
+      <div class="mqtt-topics">
+        <div class="topic-row"><div class="topic-arr" id="rt1"></div><div class="topic-pill rest-pill" id="rp1">Pedido #12 pronto</div></div>
+        <div class="topic-row"><div class="topic-arr" id="rt2"></div><div class="topic-pill rest-pill" id="rp2">Pedido #15 em preparo</div></div>
+        <div class="topic-row"><div class="topic-arr" id="rt3"></div><div class="topic-pill rest-pill" id="rp3">Pedido #18 pendente</div></div>
+      </div>
+      <div class="mqtt-box mqtt-sub">
+        <div style="font-size:28px">👥</div>
+        <div style="font-size:12px;font-weight:700;text-align:center">Todos os assinantes</div>
+        <div style="font-size:10px;color:#7c3aed;text-align:center">Recepção em tempo real</div>
+      </div>
+    </div>
+
+    <div class="mqtt-divider"></div>
+
+    <!-- FH2 MQTT -->
+    <div class="mqtt-grid" style="margin-top:12px">
+      <div class="mqtt-box mqtt-fh2 droppable" data-node="broker" id="fh2-broker">
+        <div style="font-size:26px">📡</div>
+        <div style="font-size:11.5px;font-weight:700;text-align:center">Broker MQTT</div>
+        <span class="badge b-teal" style="font-size:9.5px">Pub/Sub</span>
+        <div style="font-size:9px;color:#0d9488;text-align:center">Ponte de telemetria FH2</div>
+        <div class="node-chips" id="chips-broker"></div>
+      </div>
+      <div class="mqtt-topics">
+        <div class="topic-row"><div class="topic-arr" id="ft1" style="background:#e2e6ed"></div>
+          <div class="topic-pill fh2-pill" id="fp1">thing/product/{sn}/osd</div></div>
+        <div class="topic-row"><div class="topic-arr" id="ft2" style="background:#e2e6ed"></div>
+          <div class="topic-pill fh2-pill" id="fp2">thing/product/{sn}/state</div></div>
+        <div class="topic-row"><div class="topic-arr" id="ft3" style="background:#e2e6ed"></div>
+          <div class="topic-pill fh2-pill" id="fp3">thing/product/{sn}/events</div></div>
+        <div class="topic-row"><div class="topic-arr" id="ft4" style="background:#e2e6ed"></div>
+          <div class="topic-pill fh2-pill" id="fp4">thing/product/+/osd <span style="color:#9ca3af">(coringa)</span></div></div>
+      </div>
+      <div class="mqtt-box" style="background:#f0fdfa;border:1.5px solid #0d9488;min-width:150px">
+        <div style="font-size:24px">🖥</div>
+        <div style="font-size:11.5px;font-weight:700;text-align:center">CAD / GIS / PSIM</div>
+        <span class="badge b-teal" style="font-size:9.5px">Assinante</span>
+        <div style="font-size:9px;color:#0d9488;text-align:center">Sem polling necessário</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPARISON TABLE -->
+<div class="cmp-wrap">
+  <table class="cmp-table">
+    <thead><tr>
+      <th>Tecnologia</th><th>Analogia do restaurante</th>
+      <th>Função principal</th><th>Quando usar</th>
+    </tr></thead>
+    <tbody>
+      <tr id="tr-http"><td><span class="tl-blue">HTTP</span></td>
+        <td>🛵 Entrega</td><td>Comunicação por solicitação-resposta</td>
+        <td>Solicitação e recuperação de dados únicos</td></tr>
+      <tr id="tr-api"><td><span class="tl-green">API</span></td>
+        <td>📋 Cardápio</td><td>Define funções e parâmetros disponíveis</td>
+        <td>Definição padronizada da interface</td></tr>
+      <tr id="tr-wh"><td><span class="tl-orange">Webhook</span></td>
+        <td>🛵 Entregador de prato pronto</td><td>Notificação por callback orientada a eventos</td>
+        <td>Notificar quando um evento específico ocorre</td></tr>
+      <tr id="tr-mqtt"><td><span class="tl-teal">MQTT</span></td>
+        <td>📢 Transmissão do restaurante</td><td>Mensageria leve pub/sub em tempo real</td>
+        <td>Atualizações contínuas de status e monitoramento</td></tr>
+    </tbody>
+  </table>
+</div>
+
+</div><!-- .main-col -->
+
+<!-- ═══ SIDEBAR ═══ -->
+<div class="sidebar">
+  <div class="sidebar-title">Cartões de prática</div>
+  <div class="sidebar-count" id="sb-count">11 restantes</div>
+  <div class="cards-list">
+    <div class="card" id="card-c08" draggable="true" data-id="c08" data-target="broker"><div class="card-icon-s">📍</div><div class="card-text"><div class="card-title-s">Posição GPS em tempo real</div><div class="card-sub-s">Posição contínua a 0,5 Hz</div></div></div>
+<div class="card" id="card-c04" draggable="true" data-id="c04" data-target="openapi"><div class="card-icon-s">🗺️</div><div class="card-text"><div class="card-title-s">Enviar uma rota de voo</div><div class="card-sub-s">Enviar arquivo de wayline ao FH2</div></div></div>
+<div class="card" id="card-c03" draggable="true" data-id="c03" data-target="openapi"><div class="card-icon-s">📋</div><div class="card-text"><div class="card-title-s">Consultar lista de dispositivos</div><div class="card-sub-s">Obter inventário da frota sob demanda</div></div></div>
+<div class="card" id="card-c09" draggable="true" data-id="c09" data-target="broker"><div class="card-icon-s">🔋</div><div class="card-text"><div class="card-title-s">Estado da bateria e do voo</div><div class="card-sub-s">Telemetria contínua de saúde</div></div></div>
+<div class="card" id="card-c06" draggable="true" data-id="c06" data-target="eventapi"><div class="card-icon-s">⚠️</div><div class="card-text"><div class="card-title-s">Alerta de retorno anormal ao ponto de partida</div><div class="card-sub-s">O dispositivo sai do RTH inesperadamente</div></div></div>
+<div class="card" id="card-c07" draggable="true" data-id="c07" data-target="eventapi"><div class="card-icon-s">🔗</div><div class="card-text"><div class="card-title-s">Endereço RTSP alterado</div><div class="card-sub-s">URL do fluxo atualizada no meio do voo</div></div></div>
+<div class="card" id="card-c10" draggable="true" data-id="c10" data-target="eventapi"><div class="card-icon-s">🔌</div><div class="card-text"><div class="card-title-s">Dispositivo online / missão concluída</div><div class="card-sub-s">O FH2 envia quando o evento de ciclo de vida é disparado</div></div></div>
+<div class="card" id="card-c05" draggable="true" data-id="c05" data-target="eventapi"><div class="card-icon-s">📁</div><div class="card-text"><div class="card-title-s">Notificação de arquivo de mídia pronto</div><div class="card-sub-s">Saiba quando o vídeo for carregado</div></div></div>
+<div class="card" id="card-c01" draggable="true" data-id="c01" data-target="openapi"><div class="card-icon-s">🎬</div><div class="card-text"><div class="card-title-s">Transmissão ao vivo acionada por alarme</div><div class="card-sub-s">Acionar vídeo em evento de alarme</div></div></div>
+<div class="card" id="card-c02" draggable="true" data-id="c02" data-target="openapi"><div class="card-icon-s">🚁</div><div class="card-text"><div class="card-title-s">Enviar uma missão de voo</div><div class="card-sub-s">Enviar tarefa para o Dock</div></div></div>
+<div class="card" id="card-c11" draggable="true" data-id="c11" data-target="broker"><div class="card-icon-s">🌐</div><div class="card-text"><div class="card-title-s">Consciência situacional em toda a frota</div><div class="card-sub-s">Todos os drones, todas as posições de uma vez</div></div></div>
+  </div>
+</div>
+
+</div><!-- .layout -->
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- COMPLETION OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="result-modal" style="animation:popIn .45s ease both">
+    <div class="res-header">
+      <h2>🎉 Todos os 11 combinados!</h2>
+      <p>Mapa de integração do FlightHub 2 — referência completa</p>
+    </div>
+    <div class="res-body"><div class="res-grid"><div class="res-node" style="border-top:3px solid #1a73e8"><div class="res-name" style="color:#1a73e8">API Aberta</div><div class="res-analogy">Solicitação-resposta: sua plataforma chama a cozinha — comandos ativos, respostas voltam.</div><div class="res-chip"><span style="font-size:15px">🎬</span><div><div style="font-weight:600">Transmissão ao vivo acionada por alarme</div><div style="font-size:9.5px;color:#9ca3af;font-family:JetBrains Mono,monospace">POST /openapi/v2.0/live-stream/start</div></div></div><div class="res-chip"><span style="font-size:15px">🚁</span><div><div style="font-weight:600">Enviar uma missão de voo</div><div style="font-size:9.5px;color:#9ca3af;font-family:JetBrains Mono,monospace">POST /openapi/v2.0/flight-task/create</div></div></div><div class="res-chip"><span style="font-size:15px">📋</span><div><div style="font-weight:600">Consultar lista de dispositivos</div><div style="font-size:9.5px;color:#9ca3af;font-family:JetBrains Mono,monospace">GET /openapi/v2.0/devices</div></div></div><div class="res-chip"><span style="font-size:15px">🗺️</span><div><div style="font-weight:600">Enviar uma rota de voo</div><div style="font-size:9.5px;color:#9ca3af;font-family:JetBrains Mono,monospace">POST /openapi/v2.0/flight-route/upload</div></div></div><div class="res-tech"><b>Endpoint / protocolo:</b> HTTPS RESTful · /openapi/v2.0/<br><b>Autenticação / mecanismo:</b> X-User-Token (Cloud) / OAuth 2.0 (On-Prem)</div></div><div class="res-node" style="border-top:3px solid #f59e0b"><div class="res-name" style="color:#f59e0b">API de Eventos</div><div class="res-analogy">Notificação proativa: o garçom chega à sua mesa no momento em que o prato fica pronto — você nunca precisa perguntar.</div><div class="res-chip"><span style="font-size:15px">📁</span><div><div style="font-weight:600">Notificação de arquivo de mídia pronto</div><div style="font-size:9.5px;color:#9ca3af;font-family:JetBrains Mono,monospace">Webhook: media_file_uploaded</div></div></div><div class="res-chip"><span style="font-size:15px">⚠️</span><div><div style="font-weight:600">Alerta de retorno anormal ao ponto de partida</div><div style="font-size:9.5px;color:#9ca3af;font-family:JetBrains Mono,monospace">Webhook: device_exit_return_home</div></div></div><div class="res-chip"><span style="font-size:15px">🔗</span><div><div style="font-weight:600">Endereço RTSP alterado</div><div style="font-size:9.5px;color:#9ca3af;font-family:JetBrains Mono,monospace">Webhook: live_stream_status_update</div></div></div><div class="res-chip"><span style="font-size:15px">🔌</span><div><div style="font-weight:600">Dispositivo online / missão concluída</div><div style="font-size:9.5px;color:#9ca3af;font-family:JetBrains Mono,monospace">Webhook: device_online / device_offline / flight_task_finished</div></div></div><div class="res-tech"><b>Endpoint / protocolo:</b> HTTP POST Webhook<br><b>Autenticação / mecanismo:</b> 9 tipos de evento · 7 dias de log de entrega · assinatura HMAC-SHA256</div></div><div class="res-node" style="border-top:3px solid #0d9488"><div class="res-name" style="color:#0d9488">Broker MQTT</div><div class="res-analogy">Pub/Sub Broadcast: a rádio transmite continuamente — você se inscreve uma vez e recebe os dados assim que chegam.</div><div class="res-chip"><span style="font-size:15px">📍</span><div><div style="font-weight:600">Posição GPS em tempo real</div><div style="font-size:9.5px;color:#9ca3af;font-family:JetBrains Mono,monospace">topic: thing/product/{sn}/osd</div></div></div><div class="res-chip"><span style="font-size:15px">🔋</span><div><div style="font-weight:600">Estado da bateria e do voo</div><div style="font-size:9.5px;color:#9ca3af;font-family:JetBrains Mono,monospace">topic: thing/product/{sn}/state</div></div></div><div class="res-chip"><span style="font-size:15px">🌐</span><div><div style="font-weight:600">Consciência situacional em toda a frota</div><div style="font-size:9.5px;color:#9ca3af;font-family:JetBrains Mono,monospace">topic: thing/product/+/osd (coringa)</div></div></div><div class="res-tech"><b>Endpoint / protocolo:</b> MQTT Pub/Sub · tópicos<br><b>Autenticação / mecanismo:</b> FH2 = publicador · CAD/GIS/PSIM = assinante · telemetria a 0,5 Hz</div></div></div></div>
+    <div class="res-footer">
+      <button class="btn-p" id="btn-replay">Jogar novamente</button>
+      <button class="btn-s" onclick="document.getElementById('overlay').classList.remove('show')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CARD_MAP = {"c01": {"id": "c01", "icon": "🎬", "title": "Transmissão ao vivo acionada por alarme", "sub": "Iniciar vídeo em evento de alarme", "target": "openapi", "ok": "✓ API Aberta — POST /live-stream/start retorna URL de reprodução RTMP / WebRTC-WHEP; é incorporada automaticamente na interface de despacho.", "proto": "POST /openapi/v2.0/live-stream/start"}, "c02": {"id": "c02", "icon": "🚁", "title": "Enviar uma missão de voo", "sub": "Enviar tarefa para o Dock", "target": "openapi", "ok": "✓ API Aberta — POST /flight-task/create; o núcleo FH2 agenda a missão e despacha o Dock.", "proto": "POST /openapi/v2.0/flight-task/create"}, "c03": {"id": "c03", "icon": "📋", "title": "Consultar lista de dispositivos", "sub": "Obter inventário da frota sob demanda", "target": "openapi", "ok": "✓ API Aberta — GET /devices; padrão de solicitação-resposta; retorna o registro atual dos dispositivos naquele momento.", "proto": "GET /openapi/v2.0/devices"}, "c04": {"id": "c04", "icon": "🗺️", "title": "Enviar uma rota de voo", "sub": "Enviar arquivo de wayline ao FH2", "target": "openapi", "ok": "✓ API Aberta — POST /flight-route/upload; sua plataforma envia o arquivo de wayline e o FH2 valida o conteúdo.", "proto": "POST /openapi/v2.0/flight-route/upload"}, "c05": {"id": "c05", "icon": "📁", "title": "Notificação de arquivo de mídia pronto", "sub": "Saiba quando o vídeo for carregado", "target": "eventapi", "ok": "✓ API de Eventos — o FH2 envia HTTP POST para o URL do seu webhook em media_file_uploaded; sem polling.", "proto": "Webhook: media_file_uploaded"}, "c06": {"id": "c06", "icon": "⚠️", "title": "Alerta de retorno anormal ao ponto de partida", "sub": "O dispositivo sai do RTH inesperadamente", "target": "eventapi", "ok": "✓ API de Eventos — device_exit_return_home entrega o código do motivo no momento em que é disparado; a equipe pode responder antes da escalada.", "proto": "Webhook: device_exit_return_home"}, "c07": {"id": "c07", "icon": "🔗", "title": "Endereço RTSP alterado", "sub": "URL do fluxo atualizada no meio do voo", "target": "eventapi", "ok": "✓ API de Eventos — a atualização do endereço RTSP envia a URL, usuário e senha atualizados instantaneamente; reestabelece o fluxo antes de qualquer interrupção.", "proto": "Webhook: live_stream_status_update"}, "c08": {"id": "c08", "icon": "📍", "title": "Posição GPS em tempo real", "sub": "Posição contínua a 0,5 Hz", "target": "broker", "ok": "✓ Broker MQTT — assine thing/product/{sn}/osd; o drone publica GPS, altitude, velocidade e rumo a 0,5 Hz — sem polling.", "proto": "topic: thing/product/{sn}/osd"}, "c09": {"id": "c09", "icon": "🔋", "title": "Estado da bateria e do voo", "sub": "Telemetria contínua de saúde", "target": "broker", "ok": "✓ Broker MQTT — assine thing/product/{sn}/state; nível da bateria, modo de voo, sinal e armazenamento — atualizações por mudança de estado.", "proto": "topic: thing/product/{sn}/state"}, "c10": {"id": "c10", "icon": "🔌", "title": "Dispositivo online / missão concluída", "sub": "O FH2 envia quando o evento de ciclo de vida é disparado", "target": "eventapi", "ok": "✓ API de Eventos — o FH2 envia HTTP POST no momento em que um dispositivo entra online, sai online ou uma missão é concluída; seu backend reage imediatamente sem polling.", "proto": "Webhook: device_online / device_offline / flight_task_finished"}, "c11": {"id": "c11", "icon": "🌐", "title": "Consciência situacional em toda a frota", "sub": "Todos os drones, todas as posições de uma vez", "target": "broker", "ok": "✓ Broker MQTT — use o coringa thing/product/+/osd para assinar toda a frota ao mesmo tempo; sem configuração por dispositivo.", "proto": "topic: thing/product/+/osd (coringa)"}};
+const NODE_HINTS = {"platform": "A plataforma é o consumidor, não a interface — encontre o nó da API ou do broker ao qual ela se conecta.", "openapi": "A API Aberta lida com comandos ativos (iniciar stream, enviar missão, consultar dados). Este cartão é um comando que sua plataforma envia?", "fh2core": "O núcleo FH2 é o motor interno — as integrações se conectam por API, broker ou webhook, e não diretamente ao núcleo.", "apiresponse": "A resposta da API é a parte de retorno, não um alvo de drop — coloque o cartão na interface que dispara a solicitação.", "eventapi": "A API de Eventos envia pushes HTTP proativos do FH2 para você — missão concluída, mídia pronta, dispositivo online/offline. Este cartão é um evento que o FH2 enviaria ao seu backend?", "notified": "Este é o estado final — arraste o cartão para o nó da interface que trata esse tipo de dado.", "broker": "O broker MQTT lida com telemetria contínua pub/sub. Este cartão é um fluxo de dados em tempo real, e não um comando pontual?"};
+const TOTAL = 11;
+let placed = {};
+let draggingId = null;
+
+// ── Flow activators ─────────────────────────────────────────────────
+function activateOpenAPI() {
+  ['arr-req','arr-core'].forEach(id => setArr(id,'act-blue'));
+  ['vc1','vc2','vc3'].forEach(id => setVC(id,'act-blue'));
+  document.getElementById('tr-http')?.classList.add('hi-blue');
+  document.getElementById('tr-api')?.classList.add('hi-blue');
+}
+function activateEventAPI() {
+  ['arr-evt','arr-rcv'].forEach(id => setArr(id,'act-orange'));
+  ['vc5','vc6'].forEach(id => setVC(id,'act-orange'));
+  document.getElementById('tr-wh')?.classList.add('hi-amber');
+}
+function activateMQTT(cardId) {
+  // activate a topic line per card placed (up to 4)
+  const mqttCards = Object.keys(placed).filter(id => CARD_MAP[id]?.target==='broker');
+  const idx = mqttCards.indexOf(cardId);
+  const lines = ['ft1','ft2','ft3','ft4'];
+  const pills = ['fp1','fp2','fp3','fp4'];
+  const rlines = ['rt1','rt2','rt3'];
+  const rpills = ['rp1','rp2','rp3'];
+  // activate corresponding fh2 topic line
+  if(idx>=0 && idx<lines.length) {
+    document.getElementById(lines[idx])?.classList.add('act');
+    document.getElementById(pills[idx])?.classList.add('act');
+  }
+  // activate restaurant lines progressively
+  if(idx>=0 && idx<rlines.length) {
+    document.getElementById(rlines[idx])?.classList.add('act');
+    document.getElementById(rpills[idx])?.classList.add('act');
+  }
+  document.getElementById('tr-mqtt')?.classList.add('hi-teal');
+}
+
+function setArr(id,cls) { document.getElementById(id)?.classList.add(cls); }
+function setVC(id,cls)  { document.getElementById(id)?.classList.add(cls); }
+
+// ── progress ────────────────────────────────────────────────────────
+function updateProgress() {
+  const n = Object.keys(placed).length;
+  document.querySelectorAll('.pip').forEach((p,i) => i<n ? p.classList.add('done') : p.classList.remove('done'));
+  document.getElementById('prog-lbl').textContent = n+' / '+TOTAL+' correspondidos';
+  document.getElementById('sb-count').textContent = (TOTAL-n)+' restantes';
+  if(n===TOTAL) setTimeout(()=>document.getElementById('overlay').classList.add('show'),700);
+}
+
+// ── toast ───────────────────────────────────────────────────────────
+function showToast(ok, msg, proto) {
+  const t = document.getElementById('toast');
+  t.className = 'toast' + (ok ? '' : ' err');
+  t.innerHTML = '<b>'+(ok?'':'✗ ')+msg+'</b>'+(proto?'<div class="tp">'+proto+'</div>':'');
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(()=>t.classList.remove('show'), ok?4500:3500);
+}
+
+// ── drop ────────────────────────────────────────────────────────────
+function handleDrop(nodeId, el) {
+  if(!draggingId) return;
+  const card = CARD_MAP[draggingId];
+  if(!card) return;
+
+  if(card.target === nodeId) {
+    // CORRECT
+    placed[draggingId] = nodeId;
+    document.getElementById('card-'+draggingId)?.classList.add('placed');
+    el.classList.add('placed');
+    // add chip
+    const chips = document.getElementById('chips-'+nodeId);
+    if(chips) { const sp=document.createElement('span'); sp.className='node-chip'; sp.textContent=card.icon; chips.appendChild(sp); }
+    // animate flows
+    if(nodeId==='openapi')  activateOpenAPI();
+    if(nodeId==='eventapi') activateEventAPI();
+    if(nodeId==='broker')   activateMQTT(draggingId);
+    showToast(true, card.ok, card.proto);
+    updateProgress();
+  } else {
+    // WRONG
+    el.classList.add('wrong-flash');
+    setTimeout(()=>el.classList.remove('wrong-flash'), 500);
+    const hint = NODE_HINTS[nodeId] || 'Tente outro nó — pense se isso precisa de uma solicitação, uma assinatura ou uma notificação.';
+    showToast(false, hint, null);
+  }
+}
+
+// ── drag events ─────────────────────────────────────────────────────
+const ghost = document.getElementById('dg');
+
+document.querySelectorAll('.card').forEach(card => {
+  card.addEventListener('dragstart', e => {
+    if(card.classList.contains('placed')) { e.preventDefault(); return; }
+    draggingId = card.dataset.id;
+    card.classList.add('dragging');
+    ghost.textContent = card.querySelector('.card-title-s').textContent;
+    ghost.style.display = 'block';
+    // NO visual hints on nodes — intentional
+  });
+  card.addEventListener('dragend', () => {
+    draggingId = null;
+    card.classList.remove('dragging');
+    ghost.style.display = 'none';
+  });
+});
+
+document.addEventListener('dragover', e => {
+  e.preventDefault();
+  ghost.style.left = (e.clientX+14)+'px';
+  ghost.style.top  = (e.clientY-14)+'px';
+});
+
+// All FH2 nodes accept drops (will show wrong-flash if not the right target)
+document.querySelectorAll('[data-node]').forEach(el => {
+  el.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); });
+  el.addEventListener('drop', e => {
+    e.preventDefault(); e.stopPropagation();
+    handleDrop(el.dataset.node, el);
+  });
+});
+
+// touch
+document.querySelectorAll('.card').forEach(card => {
+  card.addEventListener('touchstart', e => {
+    if(card.classList.contains('placed')) return;
+    draggingId = card.dataset.id;
+    card.classList.add('dragging');
+    ghost.textContent = card.querySelector('.card-title-s').textContent;
+    ghost.style.display='block';
+  }, {passive:true});
+});
+document.addEventListener('touchmove', e => {
+  if(!draggingId) return;
+  const t=e.touches[0];
+  ghost.style.left=(t.clientX+14)+'px';
+  ghost.style.top=(t.clientY-14)+'px';
+}, {passive:true});
+document.addEventListener('touchend', e => {
+  if(!draggingId) return;
+  const t=e.changedTouches[0];
+  ghost.style.display='none';
+  document.getElementById('card-'+draggingId)?.classList.remove('dragging');
+  const target = document.elementFromPoint(t.clientX,t.clientY)?.closest('[data-node]');
+  if(target) handleDrop(target.dataset.node, target);
+  draggingId=null;
+});
+
+// reset
+document.getElementById('btn-reset').addEventListener('click', () => {
+  placed = {};
+  document.querySelectorAll('.card').forEach(c=>c.classList.remove('placed'));
+  document.querySelectorAll('[data-node]').forEach(n=>n.classList.remove('placed','wrong-flash'));
+  document.querySelectorAll('.node-chips').forEach(ch=>ch.innerHTML='');
+  document.querySelectorAll('.farrow').forEach(a=>{
+    ['act-blue','act-orange','act-teal','act-green'].forEach(c=>a.classList.remove(c));
+  });
+  document.querySelectorAll('.vc').forEach(v=>v.className='vc');
+  ['ft1','ft2','ft3','ft4','fp1','fp2','fp3','fp4',
+   'rt1','rt2','rt3','rp1','rp2','rp3'].forEach(id=>{
+    document.getElementById(id)?.classList.remove('act');
+  });
+  ['tr-http','tr-api','tr-wh','tr-mqtt'].forEach(id=>{
+    document.getElementById(id)?.classList.remove('hi-blue','hi-amber','hi-teal');
+  });
+  document.getElementById('overlay')?.classList.remove('show');
+  document.querySelectorAll('.pip').forEach(p=>p.classList.remove('done'));
+  document.getElementById('prog-lbl').textContent='0 / 11 correspondidos';
+  document.getElementById('sb-count').textContent='11 restantes';
+});
+document.getElementById('btn-replay').addEventListener('click',()=>
+  document.getElementById('btn-reset').click());
+</script>
+</body>
+</html>

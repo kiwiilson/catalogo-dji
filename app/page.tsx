@@ -1,9 +1,9 @@
 'use client'
-
+​
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import produtosData from '@/data/produtos.json'
 import relacoesData from '@/data/relacoes.json'
-
+​
 type Produto = {
   codigo: string
   nome: string
@@ -12,50 +12,64 @@ type Produto = {
   novo_nome: string | null
   imagem_url: string | null
   links: string | null
-  entrou_em: string | null // 1º dia do mês em que entrou (ou null)
-  saiu_em: string | null   // 1º dia do mês em que saiu (null = ainda vigente)
+  novo: string | null       // "SIM" mostra o produto no filtro "Novos Itens"
+  phase_out: string | null  // "SIM" mostra o produto no filtro "Phase-out"
 }
-
+​
 type ItemRelacionado = {
   tipo: 'obrigatorio' | 'opcional' | null
   quantidade: number | null
   item: Produto
 }
-
+​
 // Dados locais: nada disso faz consulta a um banco externo em tempo de execução.
 // Pra atualizar o catálogo, edite a fonte, gere os 2 arquivos de novo e faça o deploy.
 const TODOS_PRODUTOS = produtosData as Produto[]
 const PRODUTOS_POR_CODIGO: Record<string, Produto> = Object.fromEntries(
   TODOS_PRODUTOS.map((p) => [p.codigo, p])
 )
-type RelacaoBruta = {
+// Relações agrupadas por produto principal.
+// Chave = código do principal. Cada linha do array: "codigo ; tipo ; quantidade"
+// (tipo e quantidade são opcionais; só o código é obrigatório).
+type RelacoesAgrupadas = Record<string, string[]>
+const RELACOES_POR_PRINCIPAL = relacoesData as RelacoesAgrupadas
+​
+function parseLinhaRelacao(linha: string): {
   produto_codigo: string
-  principal_codigo: string
   tipo: 'obrigatorio' | 'opcional' | null
   quantidade: number | null
+} | null {
+  const partes = linha.split(';').map((x) => x.trim())
+  const produto_codigo = partes[0]
+  if (!produto_codigo) return null
+  const tipoRaw = (partes[1] ?? '').toLowerCase()
+  const tipo =
+    tipoRaw === 'obrigatorio' ? 'obrigatorio' : tipoRaw === 'opcional' ? 'opcional' : null
+  const qtdRaw = partes[2] ?? ''
+  const quantidade =
+    qtdRaw !== '' && !Number.isNaN(Number(qtdRaw)) ? Number(qtdRaw) : null
+  return { produto_codigo, tipo, quantidade }
 }
-const TODAS_RELACOES = relacoesData as RelacaoBruta[]
-
+​
 // Código curto no banco (coluna "categoria") -> rótulo exibido no site.
 const ROTULOS_CATEGORIAS: Record<string, string> = {
   drone: 'Drone',
   dock: 'Dock',
   terra: 'DJI Terra',
   payloads: 'Payloads',
-  fh2: 'FlightHub 2 - Nuvem',
+  fh2: 'FlightHub 2',
   fh2op: 'FlightHub 2 - On-Premises',
   fh2aio: 'FlightHub 2 - All in One',
   acessorios: 'Acessórios',
   servicos: 'Serviços',
   outros: 'Outros',
-  links: 'Links Úteis',
 }
-
+​
 // Ordem dos filtros (use os MESMOS códigos do banco).
 const ORDEM_CATEGORIAS = [
-  'drone', 'dock', 'terra', 'payloads', 'fh2', 'fh2op', 'fh2aio', 'acessorios', 'servicos', 'outros', 'links',
+  'drone', 'dock', 'terra', 'payloads', 'fh2', 'fh2op', 'fh2aio', 'acessorios', 'servicos', 'outros',
 ]
-
+​
 // Cor por categoria (paleta inspirada no mapa de soluções DJI).
 // Se faltar, cai no cinza padrão.
 const CORES_CATEGORIAS: Record<string, string> = {
@@ -74,15 +88,21 @@ function corCategoria(cod: string | null) {
   if (!cod) return '#6B7280'
   return CORES_CATEGORIAS[cod] ?? '#6B7280'
 }
-
-const NOVOS = 'Novos na tabela'
-const SAIRAM = 'Saíram da tabela'
-
+​
+const NOVOS = 'Novos Itens'
+const PHASEOUT = 'Phase-out'
+​
+// Marcação SIM/NÃO: só "SIM" (em qualquer caixa) conta como verdadeiro.
+// Vazio, null ou "NÃO" contam como falso.
+function ehSim(v: string | null | undefined) {
+  return (v ?? '').trim().toUpperCase() === 'SIM'
+}
+​
 function rotuloCategoria(cod: string | null) {
   if (!cod) return ''
   return ROTULOS_CATEGORIAS[cod] ?? cod
 }
-
+​
 // Um produto pode estar em mais de uma categoria: a coluna "categoria" aceita
 // vários códigos separados por vírgula (ex.: "fh2op,fh2aio").
 function categoriasDe(p: Produto): string[] {
@@ -91,27 +111,13 @@ function categoriasDe(p: Produto): string[] {
     .map((c) => c.trim())
     .filter(Boolean)
 }
-
-// Nome exibido em cada botão de filtro (TODOS/Novos/Saíram passam direto).
+​
+// Nome exibido em cada botão de filtro (TODOS/Novos/Phase-out passam direto).
 function nomeFiltro(c: string) {
-  if (c === 'TODOS' || c === NOVOS || c === SAIRAM) return c
+  if (c === 'TODOS' || c === NOVOS || c === PHASEOUT) return c
   return rotuloCategoria(c)
 }
-
-// Primeiro dia do mês atual e do próximo, no formato 'YYYY-MM-DD'.
-function limitesMesAtual() {
-  const hoje = new Date()
-  const ano = hoje.getFullYear()
-  const mes = hoje.getMonth()
-  const fmt = (a: number, m: number) => `${a}-${String(m + 1).padStart(2, '0')}-01`
-  return { ini: fmt(ano, mes), fim: mes === 11 ? fmt(ano + 1, 0) : fmt(ano, mes + 1) }
-}
-
-// Uma data 'YYYY-MM-DD' cai no mês atual? (comparação de string, sem depender de fuso)
-function noMes(data: string | null, ini: string, fim: string) {
-  return !!data && data >= ini && data < fim
-}
-
+​
 // Aceita 1 link por linha. Formato opcional: "Rótulo | https://...".
 function parseLinks(raw: string | null): { label: string; url: string }[] {
   if (!raw) return []
@@ -135,7 +141,7 @@ function parseLinks(raw: string | null): { label: string; url: string }[] {
       return { label, url }
     })
 }
-
+​
 // Estilos que dependem de :hover / :focus / @keyframes / scrollbar não dão pra
 // fazer via inline style, então vão neste bloco de CSS global.
 const CSS = `
@@ -152,7 +158,7 @@ const CSS = `
 ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
 ::-webkit-scrollbar-track { background: #F1F5F9; }
 `
-
+​
 function Links({
   raw,
   wrapStyle,
@@ -174,7 +180,7 @@ function Links({
     </div>
   )
 }
-
+​
 function SemFoto({ size = 32 }: { size?: number }) {
   return (
     <svg
@@ -193,7 +199,7 @@ function SemFoto({ size = 32 }: { size?: number }) {
     </svg>
   )
 }
-
+​
 // Etiquetas coloridas de categoria (uma por código da coluna "categoria").
 function CategoriaBadges({ produto }: { produto: Produto }) {
   const cats = categoriasDe(produto)
@@ -214,21 +220,19 @@ function CategoriaBadges({ produto }: { produto: Produto }) {
     </div>
   )
 }
-
+​
 export default function Home() {
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [busca, setBusca] = useState('')
   const [categoria, setCategoria] = useState('TODOS')
   const [carregando, setCarregando] = useState(true)
   const [selecionado, setSelecionado] = useState<Produto | null>(null)
-
-  const { ini, fim } = useMemo(() => limitesMesAtual(), [])
-
+​
   useEffect(() => {
     setProdutos(TODOS_PRODUTOS)
     setCarregando(false)
   }, [])
-
+​
   const categorias = useMemo(() => {
     const presentes = Array.from(
       new Set(produtos.flatMap((p) => categoriasDe(p)))
@@ -238,40 +242,42 @@ export default function Home() {
       const ib = ORDEM_CATEGORIAS.indexOf(b)
       return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
     })
-    return ['TODOS', ...presentes, NOVOS, SAIRAM]
+    return ['TODOS', ...presentes, NOVOS, PHASEOUT]
   }, [produtos])
-
+​
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
-
+​
     const bateBusca = (p: Produto) =>
       !termo ||
       p.nome.toLowerCase().includes(termo) ||
       p.codigo.toLowerCase().includes(termo) ||
       (p.novo_nome?.toLowerCase().includes(termo) ?? false) ||
       (p.descricao?.toLowerCase().includes(termo) ?? false)
-
+​
     const ordena = (lista: Produto[]) =>
       [...lista].sort((a, b) =>
         (a.novo_nome || a.nome).localeCompare(b.novo_nome || b.nome, 'pt', {
           sensitivity: 'base',
         })
       )
-
+​
     return ordena(
       produtos.filter((p) => {
         if (!bateBusca(p)) return false
-        if (categoria === NOVOS) return noMes(p.entrou_em, ini, fim)
-        if (categoria === SAIRAM) return noMes(p.saiu_em, ini, fim)
+        // "Novos Itens" e "Phase-out": mostram TODOS os marcados com SIM,
+        // independente de data. Os dois são independentes.
+        if (categoria === NOVOS) return ehSim(p.novo)
+        if (categoria === PHASEOUT) return ehSim(p.phase_out)
         return categoria === 'TODOS' || categoriasDe(p).includes(categoria)
       })
     )
-  }, [produtos, busca, categoria, ini, fim])
-
+  }, [produtos, busca, categoria])
+​
   return (
     <main className="cat-main" style={s.main}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-
+​
       <header className="cat-cabecalho" style={s.cabecalho}>
         <div>
           <h1 style={s.titulo}>Produtos DJI Enterprise</h1>
@@ -279,8 +285,6 @@ export default function Home() {
             Selecione um produto para ver os itens obrigatórios e opcionais.<br></br>
             <em>Clique na imagem para ampliar. Links abrem em nova aba.</em><br></br>
             <em>Fotos meramente ilustrativas. Verifique as especificações técnicas para maiores detalhes.</em>
-
-
           </p>
         </div>
         <img
@@ -289,7 +293,7 @@ export default function Home() {
           style={s.logo}
         />
       </header>
-
+​
       <input
         className="cat-busca"
         style={s.busca}
@@ -297,7 +301,7 @@ export default function Home() {
         value={busca}
         onChange={(e) => setBusca(e.target.value)}
       />
-
+​
       <div className="cat-filtros" style={s.filtros}>
         {categorias.map((c) => (
           <button
@@ -309,11 +313,11 @@ export default function Home() {
           </button>
         ))}
       </div>
-
+​
       <p style={s.contagem}>
         Mostrando: <strong>{categoria}</strong> — {filtrados.length} item(s)
       </p>
-
+​
       {carregando ? (
         <p>Carregando…</p>
       ) : (
@@ -321,9 +325,9 @@ export default function Home() {
           {filtrados.map((p) => (
             <button key={p.codigo} className="cat-card" style={s.card} onClick={() => setSelecionado(p)}>
               <div style={s.imgWrap}>
-                {noMes(p.saiu_em, ini, fim) ? (
-                  <span style={s.badgeSaiu}>SAIU</span>
-                ) : noMes(p.entrou_em, ini, fim) ? (
+                {ehSim(p.phase_out) ? (
+                  <span style={s.badgePhaseOut}>PHASE-OUT</span>
+                ) : ehSim(p.novo) ? (
                   <span style={s.badgeNovo}>NOVO</span>
                 ) : null}
                 {p.imagem_url ? (
@@ -341,24 +345,25 @@ export default function Home() {
           ))}
         </div>
       )}
-
+​
       {selecionado && (
         <Detalhe produto={selecionado} onFechar={() => setSelecionado(null)} />
       )}
     </main>
   )
 }
-
+​
 function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void }) {
   const [itens, setItens] = useState<ItemRelacionado[]>([])
   const [carregando, setCarregando] = useState(true)
   const [fotoZoom, setFotoZoom] = useState<string | null>(null)
-
+​
   useEffect(() => {
     setCarregando(true)
-    const norm: ItemRelacionado[] = TODAS_RELACOES.filter(
-      (r) => r.principal_codigo === produto.codigo
-    )
+    const linhas = RELACOES_POR_PRINCIPAL[produto.codigo] ?? []
+    const norm: ItemRelacionado[] = linhas
+      .map(parseLinhaRelacao)
+      .filter((r): r is NonNullable<ReturnType<typeof parseLinhaRelacao>> => !!r)
       .map((r) => ({
         tipo: r.tipo,
         quantidade: r.quantidade,
@@ -375,10 +380,10 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
     setItens(norm)
     setCarregando(false)
   }, [produto.codigo])
-
+​
   const obrigatorios = itens.filter((i) => i.tipo === 'obrigatorio')
   const compativeis = itens.filter((i) => i.tipo !== 'obrigatorio')
-
+​
   return (
     <>
     <div style={s.overlay} onClick={onFechar}>
@@ -405,7 +410,7 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
             <Links raw={produto.links} wrapStyle={s.links} btnStyle={s.linkBtn} />
           </div>
         </div>
-
+​
         {carregando ? (
           <p>Carregando itens…</p>
         ) : (
@@ -424,7 +429,7 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
     </>
   )
 }
-
+​
 function Secao({
   titulo,
   itens,
@@ -466,11 +471,11 @@ function Secao({
     </section>
   )
 }
-
+​
 const s: Record<string, CSSProperties> = {
   main: { maxWidth: 1200, margin: '0 auto', padding: '32px 20px', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", color: '#111' },
   cabecalho: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24, marginBottom: 24 },
-  logo: { height: 120, width: 'auto', flexShrink: 0 },
+  logo: { height: 145, width: 'auto', flexShrink: 0 },
   titulo: { fontSize: 32, fontWeight: 700, margin: 0 },
   subtitulo: { color: '#666', marginTop: 4, marginBottom: 0 },
   busca: { width: '100%', padding: '12px 16px', fontSize: 16, borderRadius: 10, marginBottom: 16, boxSizing: 'border-box' },
@@ -481,7 +486,7 @@ const s: Record<string, CSSProperties> = {
   imgWrap: { height: 150, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8, boxSizing: 'border-box', position: 'relative' },
   img: { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' },
   badgeNovo: { position: 'absolute', top: 8, left: 8, background: '#3355FF', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 999, letterSpacing: 0.5 },
-  badgeSaiu: { position: 'absolute', top: 8, left: 8, background: '#c33', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 999, letterSpacing: 0.5 },
+  badgePhaseOut: { position: 'absolute', top: 8, left: 8, background: '#c33', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 999, letterSpacing: 0.5 },
   cardCorpo: { padding: 12, display: 'flex', flexDirection: 'column', gap: 6 },
   badgesWrap: { display: 'flex', flexWrap: 'wrap', gap: 4 },
   catBadge: { display: 'inline-flex', fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: '2px 7px', borderRadius: 5, border: '1px solid transparent', textTransform: 'uppercase' },
@@ -514,3 +519,4 @@ const s: Record<string, CSSProperties> = {
   lightbox: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40, zIndex: 60, cursor: 'zoom-out' },
   lightboxImg: { maxWidth: '80vw', maxHeight: '80vh', objectFit: 'contain', background: '#fff', borderRadius: 8 },
 }
+​
