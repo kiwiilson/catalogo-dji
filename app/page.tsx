@@ -9,11 +9,11 @@ type Produto = {
   nome: string
   categoria: string | null
   descricao: string | null
-  novo_nome: string | null
   imagem_url: string | null
   links: string | null
-  novo: string | null       // "SIM" mostra o produto no filtro "Novos Itens"
-  phase_out: string | null  // "SIM" mostra o produto no filtro "Phase-out"
+  novo: string | null
+  phase_out: string | null
+  demo: string | null
 }
 ​
 type ItemRelacionado = {
@@ -63,11 +63,12 @@ const ROTULOS_CATEGORIAS: Record<string, string> = {
   acessorios: 'Acessórios',
   servicos: 'Serviços',
   outros: 'Outros',
+  links: 'Links',
 }
 ​
 // Ordem dos filtros (use os MESMOS códigos do banco).
 const ORDEM_CATEGORIAS = [
-  'drone', 'dock', 'terra', 'payloads', 'fh2', 'fh2op', 'fh2aio', 'acessorios', 'servicos', 'outros',
+  'drone', 'dock', 'terra', 'payloads', 'fh2', 'fh2op', 'fh2aio', 'acessorios', 'servicos', 'links', 'outros', 'novos', 'phaseout', 'demos'
 ]
 ​
 // Cor por categoria (paleta inspirada no mapa de soluções DJI).
@@ -83,6 +84,7 @@ const CORES_CATEGORIAS: Record<string, string> = {
   acessorios: '#3B82F6',
   servicos: '#EC4899',
   outros: '#6B7280',
+  links: '#3355FF',
 }
 function corCategoria(cod: string | null) {
   if (!cod) return '#6B7280'
@@ -91,6 +93,7 @@ function corCategoria(cod: string | null) {
 ​
 const NOVOS = 'Novos Itens'
 const PHASEOUT = 'Phase-out'
+const DEMOS = 'Demos'
 ​
 // Marcação SIM/NÃO: só "SIM" (em qualquer caixa) conta como verdadeiro.
 // Vazio, null ou "NÃO" contam como falso.
@@ -140,6 +143,40 @@ function parseLinks(raw: string | null): { label: string; url: string }[] {
       } catch {}
       return { label, url }
     })
+}
+​
+function ehExterno(url: string) {
+  return /^https?:/i.test(url)
+}
+​
+// Produtos da categoria "links" viram atalho: o card leva direto pro link,
+// sem abrir o modal. Usa o primeiro link cadastrado (1 link por item).
+function linkDireto(p: Produto): { label: string; url: string } | null {
+  if (!categoriasDe(p).includes('links')) return null
+  const ls = parseLinks(p.links)
+  return ls.length > 0 ? ls[0] : null
+}
+​
+// Tira acento e caixa pra busca: digitar "acessorios" acha "Acessórios".
+function normaliza(v: string) {
+  return v
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+​
+// Fotos: aceita VÁRIAS urls no campo imagem_url, 1 por linha.
+// A primeira linha é a capa (usada no card). Uma única url continua funcionando.
+function parseImagens(raw: string | null): string[] {
+  if (!raw) return []
+  return raw
+    .split(/\r?\n/)
+    .map((x) => x.trim())
+    .filter(Boolean)
+}
+​
+function capaDe(p: Produto): string | null {
+  return parseImagens(p.imagem_url)[0] ?? null
 }
 ​
 // Estilos que dependem de :hover / :focus / @keyframes / scrollbar não dão pra
@@ -242,22 +279,22 @@ export default function Home() {
       const ib = ORDEM_CATEGORIAS.indexOf(b)
       return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
     })
-    return ['TODOS', ...presentes, NOVOS, PHASEOUT]
+    return ['TODOS', ...presentes, NOVOS, PHASEOUT, DEMOS]
   }, [produtos])
 ​
   const filtrados = useMemo(() => {
-    const termo = busca.trim().toLowerCase()
-​
-    const bateBusca = (p: Produto) =>
-      !termo ||
-      p.nome.toLowerCase().includes(termo) ||
-      p.codigo.toLowerCase().includes(termo) ||
-      (p.novo_nome?.toLowerCase().includes(termo) ?? false) ||
-      (p.descricao?.toLowerCase().includes(termo) ?? false)
+    ​
+    const termos = normaliza(busca).split(/\s+/).filter(Boolean)
+    const bateBusca = (p: Produto) => {
+    if (termos.length === 0) return true
+    // junta tudo num só texto: assim "bateria 4TD" acha mesmo estando em campos diferentes
+    const alvo = normaliza(`${p.nome} ${p.codigo} ${p.descricao ?? ''}`)
+    return termos.every((t) => alvo.includes(t))
+    }
 ​
     const ordena = (lista: Produto[]) =>
       [...lista].sort((a, b) =>
-        (a.novo_nome || a.nome).localeCompare(b.novo_nome || b.nome, 'pt', {
+        (a.nome || a.nome).localeCompare(b.nome || b.nome, 'pt', {
           sensitivity: 'base',
         })
       )
@@ -269,6 +306,7 @@ export default function Home() {
         // independente de data. Os dois são independentes.
         if (categoria === NOVOS) return ehSim(p.novo)
         if (categoria === PHASEOUT) return ehSim(p.phase_out)
+        if (categoria === DEMOS) return ehSim(p.demo)
         return categoria === 'TODOS' || categoriasDe(p).includes(categoria)
       })
     )
@@ -283,7 +321,7 @@ export default function Home() {
           <h1 style={s.titulo}>Produtos DJI Enterprise</h1>
           <p style={s.subtitulo}>
             Selecione um produto para ver os itens obrigatórios e opcionais.<br></br>
-            <em>Clique na imagem para ampliar. Links abrem em nova aba.</em><br></br>
+            <em>Clique na imagem para ampliar e use as setas para ver mais fotos. Links abrem em nova aba.</em><br></br>
             <em>Fotos meramente ilustrativas. Verifique as especificações técnicas para maiores detalhes.</em>
           </p>
         </div>
@@ -320,29 +358,66 @@ export default function Home() {
 ​
       {carregando ? (
         <p>Carregando…</p>
+      ) : filtrados.length === 0 ? (
+        <div style={s.vazioBusca}>
+          <SemFoto size={40} />
+          <p style={s.vazioBuscaTitulo}>Nenhum item encontrado</p>
+          <p style={s.vazioBuscaTexto}>Tente outro termo de busca ou escolha outra categoria.</p>
+          <button
+            className="cat-pill"
+            onClick={() => {
+              setBusca('')
+            }}
+          >
+            LIMPAR FILTROS
+          </button>
+        </div>
       ) : (
         <div className="cat-grid" style={s.grid} key={categoria}>
-          {filtrados.map((p) => (
-            <button key={p.codigo} className="cat-card" style={s.card} onClick={() => setSelecionado(p)}>
-              <div style={s.imgWrap}>
-                {ehSim(p.phase_out) ? (
-                  <span style={s.badgePhaseOut}>PHASE-OUT</span>
-                ) : ehSim(p.novo) ? (
-                  <span style={s.badgeNovo}>NOVO</span>
-                ) : null}
-                {p.imagem_url ? (
-                  <img src={p.imagem_url} alt={p.nome} style={s.img} />
-                ) : (
-                  <SemFoto size={40} />
-                )}
-              </div>
-              <div style={s.cardCorpo}>
-                <CategoriaBadges produto={p} />
-                <span style={s.cardNome}>{p.novo_nome || p.nome}</span>
-                <span style={s.cardCodigo}>{p.codigo}</span>
-              </div>
-            </button>
-          ))}
+          {filtrados.map((p) => {
+            const direto = linkDireto(p)
+            const capa = capaDe(p)
+            const corpo = (
+              <>
+                <div style={s.imgWrap}>
+                  {ehSim(p.phase_out) ? (
+                    <span style={s.badgePhaseOut}>PHASE-OUT</span>
+                  ) : ehSim(p.novo) ? (
+                    <span style={s.badgeNovo}>NOVO</span>
+                  ) : null}
+                  {ehSim(p.demo) ? <span style={s.badgeDemo}>DEMO</span> : null}
+                  {direto ? <span style={s.badgeLink}>ABRIR ↗</span> : null}
+                  {capa ? (
+                    <img src={capa} alt={p.nome} style={s.img} loading="lazy" />
+                  ) : (
+                    <SemFoto size={40} />
+                  )}
+                </div>
+                <div style={s.cardCorpo}>
+                  <CategoriaBadges produto={p} />
+                  <span style={s.cardNome}>{p.nome}</span>
+                  <span style={s.cardCodigo}>{p.codigo}</span>
+                </div>
+              </>
+            )
+            return direto ? (
+              <a
+                key={p.codigo}
+                className="cat-card"
+                style={{ ...s.card, textDecoration: 'none', color: 'inherit' }}
+                href={direto.url}
+                target={ehExterno(direto.url) ? '_blank' : undefined}
+                rel={ehExterno(direto.url) ? 'noopener noreferrer' : undefined}
+                title={direto.label}
+              >
+                {corpo}
+              </a>
+            ) : (
+              <button key={p.codigo} className="cat-card" style={s.card} onClick={() => setSelecionado(p)}>
+                {corpo}
+              </button>
+            )
+          })}
         </div>
       )}
 ​
@@ -356,10 +431,17 @@ export default function Home() {
 function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void }) {
   const [itens, setItens] = useState<ItemRelacionado[]>([])
   const [carregando, setCarregando] = useState(true)
-  const [fotoZoom, setFotoZoom] = useState<string | null>(null)
+  const imagens = useMemo(() => parseImagens(produto.imagem_url), [produto.imagem_url])
+  const [foto, setFoto] = useState(0)
+  const [zoom, setZoom] = useState(false)
+  const temGaleria = imagens.length > 1
+  const irPara = (d: number) =>
+    setFoto((i) => (i + d + imagens.length) % imagens.length)
 ​
   useEffect(() => {
     setCarregando(true)
+    setFoto(0)
+    setZoom(false)
     const linhas = RELACOES_POR_PRINCIPAL[produto.codigo] ?? []
     const norm: ItemRelacionado[] = linhas
       .map(parseLinhaRelacao)
@@ -371,8 +453,8 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
       }))
       .filter((r): r is ItemRelacionado => !!r.item)
     norm.sort((a, b) =>
-      (a.item.novo_nome || a.item.nome).localeCompare(
-        b.item.novo_nome || b.item.nome,
+      (a.item.nome || a.item.nome).localeCompare(
+        b.item.nome || b.item.nome,
         'pt',
         { sensitivity: 'base' }
       )
@@ -380,6 +462,23 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
     setItens(norm)
     setCarregando(false)
   }, [produto.codigo])
+​
+  // ESC fecha (primeiro o zoom, depois o modal). Setas trocam a foto.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (zoom) setZoom(false)
+        else onFechar()
+        return
+      }
+      if (imagens.length > 1 && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        const d = e.key === 'ArrowRight' ? 1 : -1
+        setFoto((i) => (i + d + imagens.length) % imagens.length)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [zoom, onFechar, imagens.length])
 ​
   const obrigatorios = itens.filter((i) => i.tipo === 'obrigatorio')
   const compativeis = itens.filter((i) => i.tipo !== 'obrigatorio')
@@ -390,13 +489,52 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
       <div className="cat-modal" style={s.modal} onClick={(e) => e.stopPropagation()}>
         <button style={s.fechar} onClick={onFechar}>×</button>
         <div className="cat-modal-header" style={s.modalHeader}>
-          {produto.imagem_url ? (
-            <img
-              src={produto.imagem_url}
-              alt={produto.nome}
-              style={s.modalImg} 
-              onClick={() => setFotoZoom(produto.imagem_url)}
-            />
+          {imagens.length > 0 ? (
+            <div style={s.galeriaWrap}>
+              <div style={s.galeriaPrincipal}>
+                <img
+                  src={imagens[foto]}
+                  alt={produto.nome}
+                  style={s.modalImg}
+                  onClick={() => setZoom(true)}
+                />
+                {temGaleria ? (
+                  <>
+                    <button
+                      style={{ ...s.galSeta, left: 0 }}
+                      onClick={() => irPara(-1)}
+                      aria-label="Foto anterior"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      style={{ ...s.galSeta, right: 0 }}
+                      onClick={() => irPara(1)}
+                      aria-label="Próxima foto"
+                    >
+                      ›
+                    </button>
+                    <span style={s.galContador}>
+                      {foto + 1}/{imagens.length}
+                    </span>
+                  </>
+                ) : null}
+              </div>
+              {temGaleria ? (
+                <div style={s.galThumbs}>
+                  {imagens.map((src, i) => (
+                    <button
+                      key={src}
+                      onClick={() => setFoto(i)}
+                      style={{ ...s.galThumb, borderColor: i === foto ? '#3355FF' : '#eee' }}
+                      aria-label={'Foto ' + (i + 1)}
+                    >
+                      <img src={src} alt="" style={s.galThumbImg} />
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           ) : (
             <div style={s.modalImgVazia}>
               <SemFoto size={40} />
@@ -404,7 +542,7 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
           )}
           <div>
             <CategoriaBadges produto={produto} />
-            <h2 style={s.modalTitulo}>{produto.novo_nome || produto.nome}</h2>
+            <h2 style={s.modalTitulo}>{produto.nome || produto.nome}</h2>
             <span style={s.cardCodigo}>Código: {produto.codigo}</span>
             {produto.descricao && <p style={s.modalDesc}>{produto.descricao}</p>}
             <Links raw={produto.links} wrapStyle={s.links} btnStyle={s.linkBtn} />
@@ -421,11 +559,38 @@ function Detalhe({ produto, onFechar }: { produto: Produto; onFechar: () => void
         )}
       </div>
     </div>
-    {fotoZoom && (
-      <div style={s.lightbox} onClick={() => setFotoZoom(null)}>
-        <img src={fotoZoom} alt={produto.nome} style={s.lightboxImg} />
+    {zoom && imagens.length > 0 ? (
+      <div style={s.lightbox} onClick={() => setZoom(false)}>
+        <img src={imagens[foto]} alt={produto.nome} style={s.lightboxImg} />
+        {temGaleria ? (
+          <>
+            <button
+              style={{ ...s.lbSeta, left: 24 }}
+              onClick={(e) => {
+                e.stopPropagation()
+                irPara(-1)
+              }}
+              aria-label="Foto anterior"
+            >
+              ‹
+            </button>
+            <button
+              style={{ ...s.lbSeta, right: 24 }}
+              onClick={(e) => {
+                e.stopPropagation()
+                irPara(1)
+              }}
+              aria-label="Próxima foto"
+            >
+              ›
+            </button>
+            <span style={s.lbContador}>
+              {foto + 1} / {imagens.length}
+            </span>
+          </>
+        ) : null}
       </div>
-    )}
+    ) : null}
     </>
   )
 }
@@ -449,15 +614,20 @@ function Secao({
           {itens.map((i) => (
             <li key={i.item.codigo} style={s.itemLinha}>
               <div style={s.itemImgWrap}>
-                {i.item.imagem_url ? (
-                  <img src={i.item.imagem_url} alt={i.item.nome} style={s.itemImg} />
+                {capaDe(i.item) ? (
+                  <img
+                    src={capaDe(i.item) as string}
+                    alt={i.item.nome}
+                    style={s.itemImg}
+                    loading="lazy"
+                  />
                 ) : (
                   <SemFoto size={20} />
                 )}
               </div>
               <div style={s.itemCorpo}>
                 <div style={s.itemNome}>
-                  {i.item.novo_nome || i.item.nome}
+                  {i.item.nome || i.item.nome}
                   {i.quantidade ? <span style={s.qtd}> × {i.quantidade}</span> : null}
                 </div>
                 <div style={s.itemCodigo}>{i.item.codigo}</div>
@@ -475,7 +645,7 @@ function Secao({
 const s: Record<string, CSSProperties> = {
   main: { maxWidth: 1200, margin: '0 auto', padding: '32px 20px', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", color: '#111' },
   cabecalho: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24, marginBottom: 24 },
-  logo: { height: 145, width: 'auto', flexShrink: 0 },
+  logo: { height: 135, width: 'auto', flexShrink: 0 },
   titulo: { fontSize: 32, fontWeight: 700, margin: 0 },
   subtitulo: { color: '#666', marginTop: 4, marginBottom: 0 },
   busca: { width: '100%', padding: '12px 16px', fontSize: 16, borderRadius: 10, marginBottom: 16, boxSizing: 'border-box' },
@@ -487,6 +657,8 @@ const s: Record<string, CSSProperties> = {
   img: { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' },
   badgeNovo: { position: 'absolute', top: 8, left: 8, background: '#3355FF', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 999, letterSpacing: 0.5 },
   badgePhaseOut: { position: 'absolute', top: 8, left: 8, background: '#c33', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 999, letterSpacing: 0.5 },
+  badgeDemo: { position: 'absolute', bottom: 8, left: 8, background: '#7C3AED', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 999, letterSpacing: 0.5 },
+  badgeLink: { position: 'absolute', top: 8, right: 8, background: '#3355FF', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 999, letterSpacing: 0.5 },
   cardCorpo: { padding: 12, display: 'flex', flexDirection: 'column', gap: 6 },
   badgesWrap: { display: 'flex', flexWrap: 'wrap', gap: 4 },
   catBadge: { display: 'inline-flex', fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: '2px 7px', borderRadius: 5, border: '1px solid transparent', textTransform: 'uppercase' },
@@ -496,8 +668,8 @@ const s: Record<string, CSSProperties> = {
   modal: { background: '#fff', borderRadius: 16, maxWidth: 720, width: '100%', maxHeight: '85vh', overflowY: 'auto', padding: 28, position: 'relative' },
   fechar: { position: 'absolute', top: 14, right: 16, border: 'none', background: 'transparent', fontSize: 28, lineHeight: 1, cursor: 'pointer', color: '#888' },
   modalHeader: { display: 'flex', gap: 16, marginBottom: 20 },
-  modalImg: { width: 120, height: 120, objectFit: 'contain', background: '#fff', borderRadius: 10, cursor: 'zoom-in' },
-  modalImgVazia: { width: 120, height: 120, background: '#fafafa', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  modalImg: { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', background: '#fff', borderRadius: 10, cursor: 'zoom-in' },
+  modalImgVazia: { width: 180, height: 180, background: '#fafafa', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   modalTitulo: { fontSize: 22, fontWeight: 700, margin: '6px 0 4px' },
   modalDesc: { color: '#555', fontSize: 14, marginTop: 6 },
   links: { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 },
@@ -518,5 +690,16 @@ const s: Record<string, CSSProperties> = {
   linkBtnSm: { fontSize: 12, fontWeight: 600, textDecoration: 'none', color: '#3355FF', border: '1px solid #3355FF', borderRadius: 6, padding: '3px 8px' },
   lightbox: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40, zIndex: 60, cursor: 'zoom-out' },
   lightboxImg: { maxWidth: '80vw', maxHeight: '80vh', objectFit: 'contain', background: '#fff', borderRadius: 8 },
+  galeriaWrap: { display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 },
+  galeriaPrincipal: { position: 'relative', width: 180, height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  galSeta: { position: 'absolute', top: '50%', transform: 'translateY(-50%)', width: 26, height: 26, borderRadius: 999, border: '1px solid #e5e7eb', background: 'rgba(255,255,255,.92)', color: '#374151', fontSize: 17, lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
+  galContador: { position: 'absolute', bottom: 2, right: 2, background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 999 },
+  galThumbs: { display: 'flex', flexWrap: 'wrap', gap: 6, width: 180 },
+  galThumb: { width: 38, height: 38, padding: 2, borderRadius: 6, border: '2px solid #eee', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  galThumbImg: { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' },
+  lbSeta: { position: 'absolute', top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, borderRadius: 999, border: 'none', background: 'rgba(255,255,255,.92)', color: '#111', fontSize: 26, lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
+  lbContador: { position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,.5)', color: '#fff', fontSize: 13, fontWeight: 600, padding: '4px 10px', borderRadius: 999 },
+  vazioBusca: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '56px 20px', border: '1px dashed #e5e7eb', borderRadius: 14, background: '#fafafa' },
+  vazioBuscaTitulo: { fontSize: 16, fontWeight: 700, color: '#374151', margin: 0 },
+  vazioBuscaTexto: { fontSize: 14, color: '#6b7280', margin: '0 0 6px' },
 }
-​

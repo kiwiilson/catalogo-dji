@@ -339,13 +339,20 @@
     "9100588 ; opcional",
     "9100589 ; opcional"
   ],
-  "kitdock": [
+  "KIT-DOCK3-M4TD": [
     "4300108 ; obrigatorio ; 1",
     "4300380 ; obrigatorio ; 2",
     "4300051 ; obrigatorio ; 1",
     "4300174 ; obrigatorio ; 1",
     "4300166 ; obrigatorio ; 1",
     "4300059 ; obrigatorio ; 1"
+  ],
+  "4640006": [
+    "4640047 ; obrigatorio ; 2",
+    "4640022 ; opcional",
+    "4640021 ; opcional",
+    "4300013 ; opcional",
+    "4640013 ; opcional"
 
   ]
 
